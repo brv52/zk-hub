@@ -1,0 +1,63 @@
+{
+  "manifestVersion": "1.1",
+  "metadata": {
+    "name": "Advanced KYC Voting Verifier",
+    "description": "Requires voters to prove inclusion in the registered voter Merkle tree.",
+    "author": "zkVote Thesis Project",
+    "version": "1.0.0"
+  },
+  "artifacts": {
+      "verificationKey": "ipfs://bafkreiduvg3z5zpsgqom63sawjg33ndzlkynmd2bxqvgoc5r4fglh4zik4",
+      "wasm": "ipfs://bafybeieso67ujpwgf2zhz77ohykdmqtb6poe2vrsibhcaelk2cbj5q55bm",
+      "zkey": "ipfs://bafybeibdzqjteqcakrghxxadqcsqv4ceqezfrkbzqqzh2n456sgrexetka"
+  },
+  "frontendDisplay": {
+    "userInputs": [
+      {
+        "id": "userSecret",
+        "label": "Voter Secret",
+        "description": "The unique secret code generated during your registration.",
+        "type": "number",
+        "validationRegex": "^[0-9]+$",
+        "isPrivate": true
+      },
+      {
+        "id": "userAge",
+        "label": "Your Age",
+        "description": "Used to generate the proof that you meet the minimum age requirement.",
+        "type": "number",
+        "validationRegex": "^[0-9]{1,3}$",
+        "isPrivate": true
+      }
+    ],
+    "computedInputs": [
+        {
+            "id": "merkleRoot",
+            "provider": "contract-call",
+            "method": "expectedMerkleRoot()",
+            "description": "Fetches the valid Merkle root from the Verifier contract."
+        },
+        {
+            "id": "minAge",
+            "provider": "contract-call",
+            "method": "expectedMinAge()",
+            "description": "Fetches the minimum age requirement from the contract."
+        },
+        {
+            "id": "pathElements",
+            "provider": "merkle-tree",
+            "description": "Cryptographic path verifying your identity."
+        },
+        {
+            "id": "pathIndices",
+            "provider": "merkle-tree",
+            "description": "Positional indices for the Merkle proof."
+        },
+        {
+            "id": "pollId",
+            "provider": "static",
+            "description": "The ID of the current poll."
+        }
+    ]
+  }
+}
