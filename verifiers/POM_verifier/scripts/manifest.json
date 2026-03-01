@@ -1,0 +1,24 @@
+{
+  "version": "1.0.0",
+  "name": "Thesis Membership Verifier",
+  "verificationMethod": "merkle-tree",
+  "artifacts": {
+    "wasmURI": "ipfs://QmWtHJo9BR31UDrF1ix38YACGMLLb3vvvTyVDnjmSWeieW",
+    "zkeyURI": "ipfs://QmNScBGkYfXfaQEdKtJoatXufvqvyVsrpreEqTYTb24GFy"
+  },
+  "config": {
+    "treeSourceURI": "https://gateway.pinata.cloud/ipfs/QmVwSxfJMvAWMieeqMwUemTYMx9uip6ss7UuPSeM8ju5D7",
+    "expectedMinAge": 18,
+    "depth": 10,
+    "arity": 2,
+    "hashAlgorithm": "poseidon"
+  },
+  "userInputs": {
+    "secret": "string",
+    "age": "number"
+  },
+  "inputOrder": [
+    "secret",
+    "age"
+  ]
+}
