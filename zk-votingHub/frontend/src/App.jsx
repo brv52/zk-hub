@@ -201,7 +201,7 @@ export default function App() {
         {!account ? (
           <div className="flex flex-col items-center justify-center h-full max-w-2xl mx-auto text-center">
             <h1 className="font-display text-5xl md:text-7xl font-black mb-6 uppercase tracking-tighter mix-blend-difference">
-              Zero Knowledge <br/><span className="text-transparent border-text" style={{ WebkitTextStroke: '1px #f0f0f0' }}>Absolute Power</span>
+              Zero Knowledge <br/><span className="text-transparent border-text" style={{ WebkitTextStroke: '1px #f0f0f0' }}>Consensus Protocol</span>
             </h1>
             <p className="text-xs uppercase tracking-[0.3em] text-[#f0f0f0]/60 mb-12">
               Cryptographically secure. Universally verifiable. Identity obliterated.
@@ -270,7 +270,7 @@ export default function App() {
                     {activeTab === 'all' ? '// ACTIVE_CONTRACTS' : '// VERIFIED_PARTICIPATION'}
                   </h2>
                   <span className="text-xs uppercase tracking-widest text-[#f0f0f0]/50 font-bold">
-                    [ HOT_NODES.SHOW({filteredPolls.length}) ]
+                    {activeTab === 'all' ? `[ HOT_NODES.SHOW(${filteredPolls.length}) ]` : `[ FOUND_NODES.SHOW(${filteredPolls.length}) ]`}
                   </span>
                 </div>
 
@@ -285,7 +285,7 @@ export default function App() {
                     <div className="glass-panel p-16 border-dashed border-[#f0f0f0]/30 flex flex-col items-center text-center">
                       <h3 className="font-display text-4xl text-[#f0f0f0]/50 mb-4 tracking-tighter">// NULL_SET</h3>
                       <p className="text-xs uppercase tracking-widest text-[#f0f0f0]/50 mb-4">
-                        No active smart contracts match the current local buffer.
+                        No existing votes match the current local buffer.
                       </p>
                       
                       {searchQuery && (
