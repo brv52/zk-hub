@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "name": "L2 State Storage Proof",
+  "verificationMethod": "storage-proof",
+  "artifacts": {
+    "wasmURI": "ipfs://QmTdM6JFZTE8s6VTfmcvtmH7PNYnMzRkqpfg1YUaBmWW5q",
+    "zkeyURI": "ipfs://QmXDaGoDgsT2XA1rXp6tWkyLbo1EjejdpeoaDAKY3mpRvv"
+  },
+  "config": {
+    "storageURI": "ipfs://QmawbJnhpZj1dV5Nb9MrLGFMz9UkBnMyEBXu6LqkmGY5uy",
+    "depth": 10
+  },
+  "userInputs": {
+    "slot": "number",
+    "value": "number"
+  },
+  "inputOrder": [
+    "slot",
+    "value"
+  ]
+}

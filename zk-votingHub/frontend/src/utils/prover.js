@@ -9,9 +9,6 @@ export function resolveGateway(uri) {
     return uri;
 }
 
-/**
- * ZK Proof generator for LOCAL Groth16 proofs (Merkle Trees, etc.)
- */
 export async function generateAndEncodeProof(manifest, resolvedInputs) {
     if (!manifest.artifacts || !manifest.artifacts.wasmURI || !manifest.artifacts.zkeyURI) {
         throw new Error("Prover Error: Manifest is missing artifacts for local Groth16 proving.");
@@ -37,11 +34,7 @@ export async function generateAndEncodeProof(manifest, resolvedInputs) {
     }
 }
 
-/**
- * Encodes local Groth16 SnarkJS output for EVM
- */
 function encodeProofForEVM(proof, publicSignals) {
-    const clientNullifier = publicSignals[0];
     const pA = [proof.pi_a[0], proof.pi_a[1]];
     const pB = [
         [proof.pi_b[0][1], proof.pi_b[0][0]], 
@@ -49,20 +42,12 @@ function encodeProofForEVM(proof, publicSignals) {
     ];
     const pC = [proof.pi_c[0], proof.pi_c[1]];
 
-    const abiCoder = new ethers.AbiCoder();
-    return abiCoder.encode(
-        ["uint256[2]", "uint256[2][2]", "uint256[2]", "uint256"],
-        [pA, pB, pC, clientNullifier]
-    );
-}
+    const pubSignalsArray = publicSignals.map(signal => signal.toString());
 
-/**
- * НОВАЯ ФУНКЦИЯ: Упаковывает внешние пруфы (ZKPassport) для EVM
- * @param {Array} externalProofs - Массив сырых байтов от внешнего SDK
- * @returns {string} - Bytes calldata
- */
-export function encodeExternalProof(externalProofs) {
     const abiCoder = new ethers.AbiCoder();
-    // ZKPassport и Noir обычно ожидают массив байтов
-    return abiCoder.encode(['bytes[]'], [externalProofs]);
+    
+    return abiCoder.encode(
+        ["uint256[2]", "uint256[2][2]", "uint256[2]", "uint256[]"],
+        [pA, pB, pC, pubSignalsArray]
+    );
 }

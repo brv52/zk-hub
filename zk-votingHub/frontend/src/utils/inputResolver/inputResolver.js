@@ -1,10 +1,12 @@
 import { ProofOfMembershipStrategy } from "./strategies/ProofOfMembershipStrategy";
 import { ZKPassportStrategy } from "./strategies/ZKPassportStrategy";
+import { ProofOfStorageStrategy } from "./strategies/ProofOfStorageStrategy";
 
 const strategies = {
     "zkpassport": new ZKPassportStrategy(),
     "proof-of-membership": new ProofOfMembershipStrategy(),
-    "merkle-tree": new ProofOfMembershipStrategy()
+    "merkle-tree": new ProofOfMembershipStrategy(),
+    "storage-proof": new ProofOfStorageStrategy()
 };
 
 export async function resolveSystemInputs(manifest, userInputs, verifierAddress, provider) {

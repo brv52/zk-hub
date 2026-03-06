@@ -4,9 +4,9 @@ import { ZKPassport } from '@zkpassport/sdk';
 import { QRCodeSVG } from "qrcode.react";
 import abi from '../contracts/VotingHub.json';
 
-export default function ZKPassportStation({ pollId, selectedOption, requirements, votingHubAddress, provider }) {
+export default function ZKPassportStation({ pollId, selectedOption, requirements, votingHubAddress, provider, onVoteSuccess }) {
     const [qrUrl, setQrUrl] = useState("");
-    const [status, setStatus] = useState("Initializing SDK Bridge...");
+    const [status, setStatus] = useState("> INIT_SDK_BRIDGE...");
     const [isError, setIsError] = useState(false);
     const isInitialized = useRef(false);
 
@@ -16,13 +16,13 @@ export default function ZKPassportStation({ pollId, selectedOption, requirements
 
         const initZK = async () => {
             try {
-                setStatus("Connecting to ZKPassport Bridge...");
+                setStatus("> CONNECTING_TO_BRIDGE...");
                 const hostname = window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname;
                 const zkPassport = new ZKPassport(hostname);
 
                 const queryBuilder = await zkPassport.request({
-                    name: "ZK Voting Hub",
-                    purpose: `Anonymous Vote for Poll #${pollId}`,
+                    name: "ZK_VOTING_HUB",
+                    purpose: `SYS.VOTE_POLL_${pollId}`,
                     mode: "compressed-evm", 
                     devMode: true, 
                     scope: "voting-scope" 
@@ -30,47 +30,49 @@ export default function ZKPassportStation({ pollId, selectedOption, requirements
 
                 queryBuilder.bind("custom_data", pollId.toString());
 
-                if (requirements?.minAge) {
-                    queryBuilder.gte("age", Number(requirements.minAge));
-                }
-                if (requirements?.nationality && requirements.nationality.length > 0) {
-                    queryBuilder.in("nationality", requirements.nationality);
+                let builder = queryBuilder;
+
+                for (const [key, value] of Object.entries(requirements || {})) {
+                  if (key === 'pollId') continue;
+
+                  if (Array.isArray(value)) {
+                    builder = builder.in(key, value);
+                  }
+                  else if (key.toLowerCase().startsWith('min')) {
+                    const attr = key.replace('min', '').toLowerCase();
+                    builder = builder.gte(attr, Number(value));
+                  }
+                  else if (key.toLowerCase().startsWith('max')) {
+                    const attr = key.replace('max', '').toLowerCase();
+                    builder = builder.lte(attr, Number(value));
+                  }
+                  else {
+                    builder = builder.eq(key, value);
+                  }
                 }
 
-                const request = queryBuilder.done();
+                const request = builder.done();
                 setQrUrl(request.url);
-                setStatus("Scan QR or use the link below if you are on mobile.");
+                setStatus("> AWAITING_OPTICAL_SCAN...");
 
-                let capturedProof = null;
-
-                request.onProofGenerated((proof) => {
-                    console.log("🧩 ZKPassport: Proof generated", proof);
-                    capturedProof = proof;
-                    setStatus("Proof received! Awaiting final bridge verification...");
+                request.onProofGenerated(async (proof) => {
+                    setStatus("> PROOF_RECEIVED. TRIGGERING_METAMASK...");
+                    await sendVoteToBlockchain(zkPassport, proof);
                 });
 
-                request.onResult(async (result) => {
-                    const isVerified = result === true || result?.verified === true;
-                    if (!isVerified) {
-                        setIsError(true);
-                        setStatus("Error: Cryptographic verification failed.");
-                        return;
-                    }
-
-                    if (capturedProof) {
-                        setStatus("Proof valid! Please sign the Web3 transaction...");
-                        await sendVoteToBlockchain(zkPassport, capturedProof);
-                    }
+                // Оставляем onResult просто для логирования, мы больше не ждем его
+                request.onResult((result) => {
+                    console.log("Local browser verification finished (ignored):", result);
                 });
 
                 request.onError((error) => {
                     setIsError(true);
-                    setStatus(`SDK Bridge Error: ${error.message || error}`);
+                    setStatus(`> SDK_ERR: ${error.message || error}`);
                 });
 
             } catch (err) {
                 setIsError(true);
-                setStatus(`Initialization Error: ${err.message}`);
+                setStatus(`> INIT_ERR: ${err.message}`);
                 isInitialized.current = false;
             }
         };
@@ -109,59 +111,71 @@ export default function ZKPassportStation({ pollId, selectedOption, requirements
                 }
             };
 
-            const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+            // Используем new ethers.AbiCoder() для 100% совместимости с ethers v6
+            const abiCoder = new ethers.AbiCoder();
             const encodedProofData = abiCoder.encode([paramsTuple], [formattedParams]);
 
+            setStatus("> AWAITING_LEDGER_SIGNATURE...");
             const tx = await hubContract.vote(pollId, selectedOption, encodedProofData, { gasLimit: 2500000 });
+            
+            setStatus("> TX_SENT. AWAITING_CONFIRMATION...");
             await tx.wait();
-            setStatus("✅ Success! Your anonymous vote has been recorded.");
+            
+            setStatus("> SUCCESS: ANONYMOUS_PAYLOAD_RECORDED.");
+            
+            // 2. ГЛАВНОЕ: Вызываем коллбэк для родителя (с небольшой задержкой для UX)
+            if (onVoteSuccess) {
+                setTimeout(() => {
+                    onVoteSuccess();
+                }, 1500); 
+            }
 
         } catch (err) {
             setIsError(true);
-            setStatus(`Transaction Error: ${err.reason || err.message}`);
+            setStatus(`> TX_ERR: ${err.reason || err.message}`);
+            console.error("Blockchain Error:", err);
         }
     };
 
     return (
-        <div className="bg-white p-8 border-2 border-blue-500 rounded-xl text-center shadow-xl max-w-lg mx-auto">
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">ZKPassport Gateway</h3>
-            <p className="text-gray-600 text-sm mb-6">Verify your identity to vote. Personal data stays on your device.</p>
+        <div className="glass-panel p-8 border-[#ccff00]/50 text-center max-w-lg mx-auto shadow-[0_0_50px_rgba(204,255,0,0.05)]">
+            <h3 className="font-display text-2xl font-black uppercase tracking-widest text-[#f0f0f0] mb-2">Biometric Gateway</h3>
+            <p className="font-mono text-[10px] text-[#f0f0f0]/50 uppercase tracking-[0.2em] mb-8">VERIFY_IDENTITY_VIA_PASSPORT</p>
 
-            <div className="flex flex-col items-center mb-6">
-                <div className="bg-white p-4 border border-gray-100 shadow-inner rounded-2xl mb-4">
+            <div className="flex flex-col items-center mb-8">
+                <div className="bg-[#f0f0f0] p-4 border-4 border-[#0a0a0a] mb-6">
                     {qrUrl ? (
-                        <QRCodeSVG value={qrUrl} size={220} level="H" includeMargin={true} />
+                        <QRCodeSVG value={qrUrl} size={220} level="H" includeMargin={false} />
                     ) : (
-                        <div className="w-56 h-56 flex items-center justify-center bg-gray-50 text-gray-400 rounded-lg animate-pulse">
-                            Generating Session...
+                        <div className="w-[220px] h-[220px] flex items-center justify-center bg-[#f0f0f0] text-[#0a0a0a] font-mono text-xs font-bold uppercase tracking-widest animate-pulse border-2 border-dashed border-[#0a0a0a]/20">
+                            [ GENERATING... ]
                         </div>
                     )}
                 </div>
 
-                {/* НОВАЯ КНОПКА ДЛЯ МОБИЛЬНЫХ ПОЛЬЗОВАТЕЛЕЙ */}
                 {qrUrl && (
                     <a 
                         href={qrUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center px-6 py-3 bg-blue-50 text-blue-700 font-bold rounded-lg border border-blue-200 hover:bg-blue-100 transition-all active:scale-95"
+                        className="brutal-btn !border-[#ccff00] !text-[#ccff00] hover:!bg-[#ccff00] hover:!text-[#0a0a0a] w-full max-w-[250px]"
                     >
-                        <span className="mr-2"></span> Open in ZKPassport App
+                        &gt; EXECUTE_DEEP_LINK
                     </a>
                 )}
             </div>
 
-            <div className={`p-4 rounded-lg text-sm font-bold border transition-colors
-                ${isError ? "bg-red-50 text-red-800 border-red-200" 
-                : status.includes("✅") ? "bg-green-50 text-green-800 border-green-200" 
-                : "bg-blue-50 text-blue-800 border-blue-200"}`}
+            <div className={`p-4 font-mono text-xs uppercase tracking-widest border transition-none
+                ${isError ? "bg-red-500/10 text-red-500 border-red-500" 
+                : status.includes("SUCCESS") ? "bg-[#ccff00]/10 text-[#ccff00] border-[#ccff00]" 
+                : "bg-transparent text-[#f0f0f0] border-[#f0f0f0]/30 animate-pulse"}`}
             >
                 {status}
             </div>
             
             {isError && (
-                <button onClick={() => window.location.reload()} className="mt-4 text-xs font-bold text-blue-600 hover:underline">
-                    Restart Session
+                <button onClick={() => window.location.reload()} className="mt-6 font-mono text-[10px] text-red-500 uppercase tracking-[0.3em] hover:text-[#f0f0f0] transition-none border-b border-red-500 hover:border-[#f0f0f0] pb-1">
+                    [ RESTART_SEQUENCE ]
                 </button>
             )}
         </div>

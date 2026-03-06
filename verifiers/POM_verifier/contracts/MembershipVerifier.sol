@@ -1,17 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-/**
- * @title IUniversalVerifier
- * @notice The new Universal Interface every verifier must implement.
- */
 interface IUniversalVerifier {
-    /**
-     * @param pollId The ID of the poll being voted on.
-     * @param proofData The ABI-encoded cryptographic proof (Groth16, ZKPassport, etc.)
-     * @return isValid True if the proof mathematically verifies.
-     * @return nullifier A unique bytes32 hash to prevent double voting.
-     */
     function verifyProof(uint256 pollId, bytes calldata proofData) external returns (bool isValid, bytes32 nullifier);
 }
 
@@ -41,8 +31,11 @@ contract MembershipVerifier is IUniversalVerifier {
             uint[2] memory pA,
             uint[2][2] memory pB,
             uint[2] memory pC,
-            uint256 clientNullifier
-        ) = abi.decode(proofData, (uint[2], uint[2][2], uint[2], uint256));
+            uint256[] memory decodedSignals
+        ) = abi.decode(proofData, (uint[2], uint[2][2], uint[2], uint256[]));
+
+        require(decodedSignals.length >= 1, "Invalid public signals length");
+        uint256 clientNullifier = decodedSignals[0];
 
         uint[4] memory pubSignals = [
             clientNullifier,

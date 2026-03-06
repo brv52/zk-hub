@@ -13,7 +13,7 @@ function validateInputs(manifest, userInputs) {
 export class ProofOfMembershipStrategy extends BaseStrategy {
     async resolve(manifest, userInputs, verifierAddress, provider) {
         const config = manifest.config || {};
-        const resolvedInputs = { ...userInputs };
+        const resolvedInputs = { ...userInputs, ...config };
 
         if (!validateInputs(manifest, userInputs)) {
             throw new Error("ProofOfMembership Error: Inputs from manifest do not match User Inputs");
@@ -24,8 +24,13 @@ export class ProofOfMembershipStrategy extends BaseStrategy {
 
         resolvedInputs.pathElements = treeData.pathElements;
         resolvedInputs.pathIndices = treeData.pathIndices;
+
         resolvedInputs.merkleRoot = treeData.calculatedRoot;
-        resolvedInputs.expectedMinAge = config.expectedMinAge || 0;
+        delete resolvedInputs.treeSourceURI;
+        delete resolvedInputs.depth;
+        delete resolvedInputs.arity;
+        delete resolvedInputs.emptyNodeValue;
+        delete resolvedInputs.hashAlgorithm;
 
         return resolvedInputs;
     }

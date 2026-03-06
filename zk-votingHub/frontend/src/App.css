@@ -1,1 +1,82 @@
 @import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Syne:wght@600;800&display=swap');
+
+@layer base {
+  :root {
+    --void: #0a0a0a;
+    --raw: #f0f0f0;
+    --acid: #ccff00;
+  }
+
+  body {
+    background-color: var(--void);
+    color: var(--raw);
+    font-family: 'JetBrains Mono', monospace;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-display {
+    font-family: 'Syne', sans-serif;
+  }
+
+  ::selection {
+    background-color: var(--acid);
+    color: var(--void);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--void);
+    border-left: 1px solid rgba(240, 240, 240, 0.1);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--raw);
+    border: 1px solid var(--void);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--acid);
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-[#0a0a0a]/20 backdrop-blur-xl border border-transparent;
+    box-shadow: inset 0 0 0 1px rgba(240, 240, 240, 0.1), 0 8px 32px rgba(0, 0, 0, 0.8);
+  }
+
+  .brutal-btn {
+    @apply transition-none border border-[#f0f0f0] text-[#f0f0f0] uppercase text-xs tracking-[0.2em] font-bold py-3 px-6 cursor-pointer relative bg-transparent;
+  }
+  
+  .brutal-btn:hover {
+    @apply bg-[#f0f0f0] text-[#0a0a0a] translate-x-[-2px] translate-y-[-2px] shadow-[4px_4px_0px_0px_#ccff00] border-[#ccff00];
+  }
+
+  .brutal-btn:active {
+    @apply translate-x-[0px] translate-y-[0px] shadow-none bg-[#ccff00] text-[#0a0a0a];
+  }
+
+  .brutal-tab {
+    @apply transition-none border border-transparent text-[#f0f0f0]/50 uppercase text-xs tracking-[0.2em] font-bold py-2 px-4 cursor-pointer hover:text-[#f0f0f0];
+  }
+
+  .brutal-tab[data-active="true"] {
+    @apply border-[#f0f0f0] text-[#0a0a0a] bg-[#f0f0f0] shadow-[2px_2px_0px_0px_#ccff00];
+  }
+}
+
+@keyframes glitch-text {
+  0% { opacity: 1; transform: translateX(0); }
+  20% { opacity: 0.8; transform: translateX(-2px); }
+  40% { opacity: 1; transform: translateX(2px); }
+  60% { opacity: 0.9; transform: translateX(-1px); color: var(--acid); }
+  80% { opacity: 1; transform: translateX(1px); color: var(--raw); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+.animate-glitch {
+  animation: glitch-text 0.4s infinite;
+}

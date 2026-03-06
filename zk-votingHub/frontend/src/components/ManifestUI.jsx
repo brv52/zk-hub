@@ -5,36 +5,40 @@ export default function ManifestUI({ manifest, zkInputs, setZkInputs, isProving,
 
   if (inputKeys.length === 0) {
     return (
-      <div className="py-4 border-t border-gray-100 mt-6">
-        <p className="text-gray-500 text-sm mb-4">No specific cryptographic inputs required for this verification method.</p>
+      <div className="py-6 border-t border-[#f0f0f0]/20 mt-6">
+        <p className="font-mono text-xs text-[#f0f0f0]/50 uppercase tracking-widest mb-6">
+          &gt; NO_MANUAL_INPUTS_REQUIRED
+        </p>
         <SubmitButton isProving={isProving} onSubmit={onSubmit} />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 mb-6 border-t border-gray-100 pt-6">
-      <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Cryptographic Proof Inputs</h4>
+    <div className="space-y-6 mb-6 border-t border-[#f0f0f0]/20 pt-6">
+      <h4 className="font-mono text-xs font-bold text-[#f0f0f0] uppercase tracking-widest border-l-2 border-[#ccff00] pl-3">
+        // INJECT_PAYLOAD_DATA
+      </h4>
       {inputKeys.map((key) => {
         const type = manifest.userInputs?.[key] || "string";
         const isNumber = type === "number";
 
         return (
           <div key={key}>
-            <label className="block text-sm font-medium text-gray-700 capitalize mb-1">
-              {key.replace(/([A-Z])/g, " $1").trim()}
+            <label className="block font-mono text-[10px] text-[#f0f0f0]/50 uppercase tracking-[0.2em] mb-2">
+              &gt; {key.replace(/([A-Z])/g, "_$1").toUpperCase()}
             </label>
             <input
               type={isNumber ? "number" : "text"}
-              className="block w-full rounded-md border-gray-300 shadow-sm p-3 border focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              placeholder={`Enter your ${key}`}
+              className="w-full md:w-1/2 p-4 bg-transparent border border-[#f0f0f0]/20 text-[#f0f0f0] font-mono text-xs uppercase tracking-widest focus:border-[#ccff00] focus:ring-0 outline-none transition-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+              placeholder={`[ ENTER_${key.toUpperCase()} ]`}
               value={zkInputs[key] || ""}
               onChange={(e) => setZkInputs((prev) => ({ ...prev, [key]: e.target.value }))}
             />
           </div>
         );
       })}
-      <div className="pt-2">
+      <div className="pt-4">
         <SubmitButton isProving={isProving} onSubmit={onSubmit} />
       </div>
     </div>
@@ -45,10 +49,12 @@ const SubmitButton = ({ isProving, onSubmit }) => (
   <button
     onClick={onSubmit}
     disabled={isProving}
-    className={`w-full py-4 rounded-md text-white font-bold transition shadow-sm ${
-      isProving ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+    className={`w-full brutal-btn !py-4 ${
+      isProving ? "!border-[#f0f0f0]/20 !text-[#f0f0f0]/20 pointer-events-none" : "!border-[#ccff00] !text-[#ccff00] hover:!bg-[#ccff00] hover:!text-[#0a0a0a]"
     }`}
   >
-    {isProving ? "Processing Cryptography..." : "Generate Proof & Vote"}
+    {isProving ? (
+        <span className="animate-glitch">[ OBFUSCATING_DATA... ]</span>
+    ) : "GENERATE_ZK_PROOF && EXECUTE_VOTE"}
   </button>
 );

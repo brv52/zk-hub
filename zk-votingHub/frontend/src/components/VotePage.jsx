@@ -40,6 +40,13 @@ export default function VotePage({ pollId, votingHubAddress, provider }) {
   
   const [startPassportFlow, setStartPassportFlow] = useState(false);
 
+  const [endTime, setEndTime] = useState(0);
+  const [timeLeftStr, setTimeLeftStr] = useState("");
+  const [isClosed, setIsClosed] = useState(false);
+  const [userVotedFor, setUserVotedFor] = useState(null);
+  const [pollResults, setPollResults] = useState([]);
+  const [totalVotes, setTotalVotes] = useState(0);
+
   useEffect(() => {
     const fetchPollData = async () => {
       if (!provider) return;
@@ -48,17 +55,23 @@ export default function VotePage({ pollId, votingHubAddress, provider }) {
         const contract = new ethers.Contract(votingHubAddress, abi.abi, provider);
         
         const pollData = await contract.polls(pollId);
-        if (!pollData[5]) throw new Error("Poll not found.");
+        if (!pollData[6]) throw new Error("INSTANCE_NOT_FOUND");
         
+        setEndTime(Number(pollData[5]));
+
         const fetchedOptions = await contract.getOptions(pollId);
         setOptions(fetchedOptions);
         
+        const savedVotes = JSON.parse(localStorage.getItem("zkVotes") || "{}");
+        if (savedVotes[pollId.toString()]) {
+            setUserVotedFor(savedVotes[pollId.toString()]);
+        }
+
         const manifestUrl = resolveGateway(pollData[4]);
         const res = await fetch(manifestUrl);
+        if (!res.ok) throw new Error("ERR: IPFS_MANIFEST_UNREACHABLE");
         
-        if (!res.ok) throw new Error("Failed to load manifest from IPFS.");
         const manifest = await res.json();
-        
         setManifestData(manifest);
         if (manifest?.verificationMethod !== "zkpassport") {
             const inputsToDisplay = manifest?.inputOrder 
@@ -75,10 +88,64 @@ export default function VotePage({ pollId, votingHubAddress, provider }) {
     fetchPollData();
   }, [pollId, votingHubAddress, provider]);
 
+  useEffect(() => {
+    if (!endTime) return;
+    
+    const updateTimer = () => {
+        const now = Math.floor(Date.now() / 1000);
+        if (now >= endTime) {
+            setIsClosed(true);
+            setTimeLeftStr("LIFESPAN_TERMINATED");
+        } else {
+            const diff = endTime - now;
+            const d = Math.floor(diff / 86400);
+            const h = Math.floor((diff % 86400) / 3600);
+            const m = Math.floor((diff % 3600) / 60);
+            const s = diff % 60;
+            setTimeLeftStr(`${d > 0 ? d + 'd ' : ''}${h}h ${m}m ${s}s`);
+        }
+    };
+    
+    updateTimer();
+    const timerId = setInterval(updateTimer, 1000);
+    return () => clearInterval(timerId);
+  }, [endTime]);
+
+  useEffect(() => {
+    const fetchResults = async () => {
+      if ((isClosed || userVotedFor) && options.length > 0 && provider) {
+          const contract = new ethers.Contract(votingHubAddress, abi.abi, provider);
+          let tempTotal = 0;
+          let tempResults = [];
+          
+          for (let i = 0; i < options.length; i++) {
+              const count = Number(await contract.getVotes(pollId, i));
+              tempResults.push({ name: options[i], count });
+              tempTotal += count;
+          }
+          
+          tempResults.sort((a, b) => b.count - a.count);
+          setPollResults(tempResults);
+          setTotalVotes(tempTotal);
+      }
+    };
+    fetchResults();
+  }, [isClosed, userVotedFor, options, provider, pollId, votingHubAddress]);
+
+  // 1️⃣ НОВЫЙ ЕДИНЫЙ ОБРАБОТЧИК УСПЕХА
+  const handleVoteSuccess = () => {
+    const savedVotes = JSON.parse(localStorage.getItem("zkVotes") || "{}");
+    savedVotes[pollId.toString()] = options[selectedOption];
+    localStorage.setItem("zkVotes", JSON.stringify(savedVotes));
+    
+    setTxStatus("");
+    setUserVotedFor(options[selectedOption]);
+  };
+
   const submitLocalVote = async () => {
-    if (selectedOption === null) return alert("Please select an option first.");
+    if (selectedOption === null) return alert("ERR: NO_NODE_SELECTED");
     setIsProving(true);
-    setTxStatus("Step 1/3: Resolving local inputs...");
+    setTxStatus("> RESOLVING_LOCAL_INPUTS...");
 
     try {
         const hubContract = new ethers.Contract(votingHubAddress, abi.abi, provider);
@@ -87,98 +154,181 @@ export default function VotePage({ pollId, votingHubAddress, provider }) {
         const inputState = { ...zkInputs, pollId: pollId.toString() };
         const fullInputs = await resolveSystemInputs(manifestData, inputState, pollData[1], provider);
 
-        setTxStatus("Step 2/3: Generating and Encoding Universal Payload...");
-        
+        setTxStatus("> GENERATING_UNIVERSAL_PAYLOAD...");
         const encodedProofData = await generateAndEncodeProof(manifestData, fullInputs);
 
-        setTxStatus("Step 3/3: Requesting transaction signature...");
+        setTxStatus("> AWAITING_LEDGER_SIGNATURE...");
         const signer = await provider.getSigner();
         const hubWithSigner = new ethers.Contract(votingHubAddress, abi.abi, signer);
 
-        const tx = await hubWithSigner.vote(
-            pollId, 
-            selectedOption, 
-            encodedProofData, 
-            { gasLimit: 1200000 }
-        );
+        const tx = await hubWithSigner.vote(pollId, selectedOption, encodedProofData, { gasLimit: 2500000 });
 
-        setTxStatus("Waiting for network confirmation...");
+        setTxStatus("> VERIFYING_BLOCK_INCLUSION...");
         await tx.wait();
-        setTxStatus("✅ Success! Your anonymous vote was recorded.");
+        
+        // Передаем эстафету единому обработчику
+        handleVoteSuccess();
+        
     } catch (err) {
-        setTxStatus(`❌ Error: ${err.reason || err.message}`);
+        setTxStatus(`> FATAL: ${err.reason || err.message}`);
     } finally {
         setIsProving(false);
     }
   };
 
-  if (isLoading) return <div className="p-12 text-center text-gray-500 animate-pulse">Loading blockchain state...</div>;
-  if (pageError) return <div className="p-6 text-red-800 bg-red-50 text-center">{pageError}</div>;
+  // 2️⃣ ИЗОЛЯЦИЯ ЛОГИКИ РЕНДЕРА ИНТЕРФЕЙСА ПРУВЕРА (Меньше if/else)
+  const renderProvingEngine = () => {
+    const method = manifestData?.verificationMethod;
 
-  const isZKPassport = manifestData?.verificationMethod === "zkpassport";
-  const zkPassportReqs = isZKPassport ? manifestData.config : null;;
+    // ВЕТВЬ 1: Внешние SDK (ZKPassport)
+    if (method === "zkpassport") {
+      if (startPassportFlow) {
+        return (
+          <div className="space-y-6">
+            <button onClick={() => setStartPassportFlow(false)} className="font-mono text-[10px] text-[#f0f0f0]/50 uppercase tracking-[0.3em] hover:text-[#f0f0f0] transition-none flex items-center gap-2">
+              &lt; TERM.KILL_PASSPORT_AUTH()
+            </button>
+            <ZKPassportStation
+              pollId={pollId} 
+              selectedOption={selectedOption} 
+              requirements={manifestData.config} 
+              votingHubAddress={votingHubAddress} 
+              provider={provider} 
+              onVoteSuccess={handleVoteSuccess} // Прокидываем коллбэк!
+            />
+          </div>
+        );
+      }
+      return (
+        <div className="border-t border-[#f0f0f0]/20 pt-8">
+          <button 
+            onClick={() => selectedOption !== null ? setStartPassportFlow(true) : alert("ERR: NO_NODE_SELECTED")} 
+            className="w-full brutal-btn !border-[#ccff00] !text-[#ccff00] hover:!bg-[#ccff00] hover:!text-[#0a0a0a] !py-5"
+          >
+            [ AUTHENTICATE_VIA_ZK_PASSPORT ]
+          </button>
+        </div>
+      );
+    }
+
+    // ВЕТВЬ 2: Локальная генерация (Merkle Tree, Storage Proof, etc.)
+    return (
+      <div className="space-y-6 mb-6 border-t border-[#f0f0f0]/20 pt-6">
+        <h4 className="font-mono text-xs font-bold text-[#f0f0f0] uppercase tracking-widest border-l-2 border-[#ccff00] pl-3 mb-4">
+          // INJECT_LOCAL_VARIABLES
+        </h4>
+        {displayInputs.map((input) => (
+          <div key={input.id}>
+            <label className="block font-mono text-[10px] text-[#f0f0f0]/50 uppercase tracking-[0.2em] mb-2">&gt; {input.label.toUpperCase()}</label>
+            <input
+              type={input.type === "number" ? "number" : "text"}
+              className="w-full p-4 bg-transparent border border-[#f0f0f0]/20 text-[#f0f0f0] font-mono text-xs uppercase tracking-widest focus:border-[#ccff00] focus:ring-0 outline-none transition-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              placeholder={`[ ENTER_${input.label.toUpperCase()} ]`}
+              onChange={(e) => setZkInputs((prev) => ({ ...prev, [input.id]: e.target.value }))}
+            />
+          </div>
+        ))}
+        <button onClick={submitLocalVote} disabled={isProving} className={`w-full brutal-btn !py-5 mt-4 ${isProving ? '!border-[#f0f0f0]/20 !text-[#f0f0f0]/20' : '!border-[#ccff00] !text-[#ccff00] hover:!bg-[#ccff00] hover:!text-[#0a0a0a]'}`}>
+          {isProving ? <span className="animate-glitch">[ PROVING_CIRCUIT... ]</span> : "GENERATE_PROOF && EXECUTE_VOTE"}
+        </button>
+        {txStatus && <div className="mt-6 p-4 border border-[#ccff00] bg-[#ccff00]/10 text-[#ccff00] font-mono text-xs uppercase tracking-widest">{txStatus}</div>}
+      </div>
+    );
+  };
+
+  if (isLoading) return <div className="glass-panel p-12 text-center text-[#ccff00] font-mono tracking-widest uppercase animate-pulse w-full max-w-4xl mx-auto">[ SYNCING_LEDGER_STATE... ]</div>;
+  if (pageError) return <div className="glass-panel p-6 text-red-500 border-red-500/50 bg-red-500/10 font-mono tracking-widest uppercase w-full max-w-4xl mx-auto">[ ERR: {pageError} ]</div>;
+
+  const showResults = isClosed || userVotedFor;
 
   return (
-    <div className="space-y-8 pb-12">
-      <PollManifestViewer pollId={pollId} votingHubAddress={votingHubAddress} provider={provider} />
+    <div className="space-y-8 pb-12 w-full max-w-4xl mx-auto">
+      <PollManifestViewer manifest={manifestData} />
       
-      {!startPassportFlow ? (
-        <div className="bg-white shadow rounded-lg border p-6">
-          <h3 className="text-xl font-bold mb-4">Cast Your Vote</h3>
-          
-          <div className="space-y-3 mb-6">
-            {options.map((opt, idx) => (
-              <label key={idx} className={`flex items-center p-4 border rounded-lg cursor-pointer transition ${selectedOption === idx ? 'bg-blue-50 border-blue-500 ring-1 ring-blue-500' : 'hover:bg-gray-50'}`}>
-                <input type="radio" name="voteOption" onChange={() => setSelectedOption(idx)} className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300" />
-                <span className="ml-3 font-medium text-gray-900">{opt}</span>
-              </label>
-            ))}
-          </div>
-
-          {!isZKPassport ? (
-            <div className="space-y-4 mb-6 border-t pt-4">
-              {displayInputs.map((input) => (
-                <div key={input.id}>
-                  <label className="block text-sm font-medium text-gray-700 capitalize">{input.label}</label>
-                  <input
-                    type={input.type === "number" ? "number" : "text"}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-blue-500 focus:border-blue-500"
-                    placeholder={input.description || `Enter ${input.label}`}
-                    onChange={(e) => setZkInputs((prev) => ({ ...prev, [input.id]: e.target.value }))}
-                  />
-                </div>
-              ))}
-              <button onClick={submitLocalVote} disabled={isProving} className={`w-full py-4 rounded-md text-white font-bold transition ${isProving ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 shadow-sm"}`}>
-                {isProving ? "Processing Cryptography..." : "Generate Proof & Vote"}
-              </button>
-            </div>
-          ) : (
-            <div className="border-t pt-6">
-              <button 
-                onClick={() => selectedOption !== null ? setStartPassportFlow(true) : alert("Please select an option before proceeding.")} 
-                className="w-full py-4 rounded-md text-white font-bold bg-gray-900 hover:bg-black shadow-sm transition"
+      <div className="glass-panel p-6 md:p-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 border-b border-[#f0f0f0]/20 pb-4 gap-4">
+              <h3 className="font-display text-3xl font-black uppercase tracking-widest text-[#f0f0f0]">
+                  {showResults ? (isClosed ? "// FINAL_OUTPUT" : "// LIVE_TELEMETRY") : "// CAST_PAYLOAD"}
+              </h3>
+              
+              <div className={`px-3 py-1 font-mono text-xs font-bold uppercase tracking-widest border
+                  ${isClosed ? 'border-red-500 text-red-500' : 'border-[#ccff00] text-[#ccff00]'}`}
               >
-                Authenticate with ZKPassport & Vote
-              </button>
+                  {isClosed ? "[ HALTED ]" : "[ TTL ]"} {timeLeftStr}
+              </div>
+          </div>
+          
+          {showResults ? (
+              <div className="space-y-8 animate-fade-in">
+                  {userVotedFor && (
+                      <div className="p-4 bg-[#ccff00]/10 border border-[#ccff00] text-[#ccff00] font-mono text-xs uppercase tracking-widest">
+                          &gt; PAYLOAD_DELIVERED. LOCAL_HASH: {userVotedFor}
+                      </div>
+                  )}
+                  
+                  <div className="space-y-6">
+                    {pollResults.map((result, idx) => {
+                        const percentage = totalVotes === 0 ? 0 : Math.round((result.count / totalVotes) * 100);
+                        return (
+                            <div key={idx} className="relative group">
+                                {/* Text Data */}
+                                <div className="flex mb-2 items-end justify-between font-mono text-xs uppercase tracking-widest">
+                                    <span className="text-[#f0f0f0] font-bold flex items-center gap-2">
+                                        <span className="text-[#ccff00] opacity-50">&gt;</span> 
+                                        {result.name}
+                                    </span>
+                                    <span className="text-[#ccff00] font-black text-sm">
+                                        {percentage}% <span className="text-[#f0f0f0]/30 font-normal text-[10px]">[{result.count} OP]</span>
+                                    </span>
+                                </div>
+                                
+                                {/* Cyberpunk Segmented Bar */}
+                                <div className="h-[2px] bg-[#f0f0f0]/10 w-full overflow-hidden flex relative">
+                                    <div 
+                                        style={{ width: `${percentage}%` }} 
+                                        className="h-full bg-[#ccff00] shadow-[0_0_10px_#ccff00] transition-all duration-1000 ease-out"
+                                    ></div>
+                                    <div 
+                                        style={{ left: `calc(${percentage}% - 4px)` }}
+                                        className="absolute top-0 w-2 h-full bg-[#f0f0f0]"
+                                    ></div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                  </div>
+                  
+                  <div className="text-center font-mono text-[10px] text-[#f0f0f0]/50 uppercase tracking-[0.3em] mt-8 pt-6 border-t border-[#f0f0f0]/20">
+                      TOTAL_VERIFIED_NODES: <span className="text-[#ccff00] font-bold">{totalVotes}</span>
+                  </div>
+              </div>
+          ) : (
+            // 3️⃣ ИДЕАЛЬНО ЧИСТЫЙ РЕНДЕР
+            <div className="animate-fade-in">
+              {(!startPassportFlow || manifestData?.verificationMethod !== "zkpassport") && (
+                <div className="space-y-4 mb-8">
+                  {options.map((opt, idx) => (
+                    <label 
+                      key={idx} 
+                      onClick={() => setSelectedOption(idx)}
+                      className={`flex items-center p-4 border cursor-pointer transition-none group
+                        ${selectedOption === idx ? 'bg-[#ccff00] border-[#ccff00] text-[#0a0a0a] shadow-[4px_4px_0px_0px_#f0f0f0]' : 'border-[#f0f0f0]/20 text-[#f0f0f0] hover:bg-[#f0f0f0] hover:text-[#0a0a0a]'}`}
+                    >
+                      <div className={`w-4 h-4 border mr-4 flex-shrink-0 transition-none flex items-center justify-center
+                        ${selectedOption === idx ? 'border-[#0a0a0a] bg-[#0a0a0a]' : 'border-[#f0f0f0]/50 group-hover:border-[#0a0a0a]'}`}>
+                        {selectedOption === idx && <div className="w-2 h-2 bg-[#ccff00]"></div>}
+                      </div>
+                      <span className="font-mono text-xs uppercase tracking-widest font-bold">{opt}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              {/* Вызов Router Function для рендера нужного движка */}
+              {renderProvingEngine()}
             </div>
           )}
-          
-          {txStatus && !isZKPassport && <div className="mt-4 p-4 rounded-md text-sm font-bold bg-blue-50 border border-blue-200 text-blue-800">{txStatus}</div>}
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <button onClick={() => setStartPassportFlow(false)} className="text-sm font-bold text-gray-500 hover:text-gray-900 flex items-center gap-2">
-            &larr; Change Selection
-          </button>
-          <ZKPassportStation 
-            pollId={pollId} 
-            selectedOption={selectedOption} 
-            requirements={zkPassportReqs} 
-            votingHubAddress={votingHubAddress} 
-            provider={provider} 
-          />
-        </div>
-      )}
+      </div>
     </div>
   );
 }

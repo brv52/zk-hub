@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeAll, vi } from 'vitest'; // Явный импорт методов Vitest
+import { describe, test, expect, beforeAll, vi } from 'vitest';
 import { buildPoseidon, buildMimc7 } from "circomlibjs";
 import { ProofOfMembershipStrategy } from "../strategies/ProofOfMembershipStrategy"; 
 
@@ -7,7 +7,6 @@ describe("ProofOfMembershipStrategy - Universal Merkle Tree Builder", () => {
     let poseidonFn;
     let mimc7Fn;
 
-    // Настраиваем криптографические функции для создания точных тестовых данных
     beforeAll(async () => {
         strategy = new ProofOfMembershipStrategy();
         
@@ -17,7 +16,6 @@ describe("ProofOfMembershipStrategy - Universal Merkle Tree Builder", () => {
         const mimc7 = await buildMimc7();
         mimc7Fn = (arr) => mimc7.F.toObject(mimc7.multiHash(arr)).toString();
         
-        // В Vitest используем vi.fn() вместо jest.fn()
         strategy.fetchDataset = vi.fn();
     });
 
@@ -29,7 +27,7 @@ describe("ProofOfMembershipStrategy - Universal Merkle Tree Builder", () => {
         };
 
         const leaves = [
-            poseidonFn([123n, 25n]), // Лист пользователя (Index 0)
+            poseidonFn([123n, 25n]),
             poseidonFn([456n, 30n]), 
             poseidonFn([789n, 40n]), 
             poseidonFn([999n, 50n])
@@ -39,9 +37,8 @@ describe("ProofOfMembershipStrategy - Universal Merkle Tree Builder", () => {
         const treeData = await strategy.resolve(manifest, userInputs);
 
         expect(treeData.pathElements.length).toBe(2);
-        expect(treeData.pathIndices).toEqual([0, 0]); // Index 0 -> самая левая ветка (0, 0)
-        
-        // Ручная проверка корня
+        expect(treeData.pathIndices).toEqual([0, 0]);
+
         const level1Left = poseidonFn([BigInt(leaves[0]), BigInt(leaves[1])]);
         const level1Right = poseidonFn([BigInt(leaves[2]), BigInt(leaves[3])]);
         const expectedRoot = poseidonFn([BigInt(level1Left), BigInt(level1Right)]);
@@ -57,20 +54,17 @@ describe("ProofOfMembershipStrategy - Universal Merkle Tree Builder", () => {
         };
 
         const myLeaf = poseidonFn([777n, 18n]);
-        // Arity 3, Depth 2 = 9 листьев
         const leaves = Array(9).fill("100"); 
-        leaves[4] = myLeaf; // Ставим пользователя в середину второго чанка (Index 4)
+        leaves[4] = myLeaf;
 
         strategy.fetchDataset.mockResolvedValueOnce(leaves);
         const treeData = await strategy.resolve(manifest, userInputs);
 
-        expect(treeData.pathElements.length).toBe(2); // Depth 2
+        expect(treeData.pathElements.length).toBe(2);
         
-        // Для N-ary деревьев pathElements должен быть массивом массивов (сиблинги)
         expect(Array.isArray(treeData.pathElements[0])).toBe(true);
-        expect(treeData.pathElements[0].length).toBe(2); // Arity 3 минус 1 нода = 2 сиблинга
+        expect(treeData.pathElements[0].length).toBe(2);
         
-        // Индекс 4 при арности 3 -> Чанк 1, Позиция 1
         expect(treeData.pathIndices[0]).toBe(1); 
     });
 
@@ -82,7 +76,7 @@ describe("ProofOfMembershipStrategy - Universal Merkle Tree Builder", () => {
         };
 
         const leaves = [
-            mimc7Fn([555n, 33n]), // User leaf
+            mimc7Fn([555n, 33n]),
             mimc7Fn([999n, 44n])
         ];
 
@@ -99,20 +93,17 @@ describe("ProofOfMembershipStrategy - Universal Merkle Tree Builder", () => {
         const userInputs = { secret: "111", age: "20" };
         const manifest = {
             inputOrder: ["secret", "age"],
-            // Circuit использует "9999" для пустых листьев вместо "0"
             config: { depth: 2, arity: 2, emptyNodeValue: "9999", hashAlgorithm: "poseidon" } 
         };
 
         const myLeaf = poseidonFn([111n, 20n]);
-        // Только 2 пользователя в дереве на 4 места
         const leaves = [myLeaf, poseidonFn([222n, 21n])]; 
 
         strategy.fetchDataset.mockResolvedValueOnce(leaves);
         const treeData = await strategy.resolve(manifest, userInputs);
 
-        // Ручной подсчет корня с кастомным паддингом
         const level1Node1 = poseidonFn([BigInt(leaves[0]), BigInt(leaves[1])]);
-        const level1Node2 = poseidonFn([9999n, 9999n]); // Пустая ветка
+        const level1Node2 = poseidonFn([9999n, 9999n]);
         const expectedRoot = poseidonFn([BigInt(level1Node1), BigInt(level1Node2)]);
 
         expect(treeData.merkleRoot).toBe(expectedRoot);
@@ -124,21 +115,19 @@ describe("ProofOfMembershipStrategy - Universal Merkle Tree Builder", () => {
             config: { depth: 1, arity: 2, hashAlgorithm: "poseidon" }
         };
 
-        const myLeaf = poseidonFn([123n, 45n]); // Захешировано как [secret, age]
+        const myLeaf = poseidonFn([123n, 45n]);
         const leaves = [myLeaf, poseidonFn([999n, 99n])];
 
-        // UI передает объект в ОБРАТНОМ порядке
         const userInputsUI = { age: "45", secret: "123" };
 
         strategy.fetchDataset.mockResolvedValueOnce(leaves);
         const treeData = await strategy.resolve(manifest, userInputsUI);
         
-        // Должен найти правильный индекс, так как стратегия маппит инпуты по inputOrder
         expect(treeData.pathIndices[0]).toBe(0); 
     });
 
     test("6. Error: Missing Required User Inputs", async () => {
-        const userInputs = { secret: "123" }; // Не хватает "age"
+        const userInputs = { secret: "123" };
         const manifest = {
             inputOrder: ["secret", "age"],
             config: { depth: 2, arity: 2 }
@@ -150,7 +139,7 @@ describe("ProofOfMembershipStrategy - Universal Merkle Tree Builder", () => {
     });
 
     test("7. Error: User Not Found in Public Dataset", async () => {
-        const userInputs = { secret: "999", age: "99" }; // Фейковые данные
+        const userInputs = { secret: "999", age: "99" };
         const manifest = {
             inputOrder: ["secret", "age"],
             config: { depth: 2, arity: 2, hashAlgorithm: "poseidon" }
@@ -168,7 +157,7 @@ describe("ProofOfMembershipStrategy - Universal Merkle Tree Builder", () => {
         const userInputs = { secret: "123", age: "25" };
         const manifest = {
             inputOrder: ["secret", "age"],
-            config: { depth: 2, arity: 2, hashAlgorithm: "sha256" } // Неподдерживаемый
+            config: { depth: 2, arity: 2, hashAlgorithm: "sha256" }
         };
 
         strategy.fetchDataset.mockResolvedValueOnce(["123"]);
