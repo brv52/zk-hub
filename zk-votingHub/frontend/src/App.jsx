@@ -270,7 +270,7 @@ export default function App() {
                     {activeTab === 'all' ? '// ACTIVE_CONTRACTS' : '// VERIFIED_PARTICIPATION'}
                   </h2>
                   <span className="text-xs uppercase tracking-widest text-[#f0f0f0]/50 font-bold">
-                    {activeTab === 'all' ? `[ HOT_NODES.SHOW(${filteredPolls.length}) ]` : `[ FOUND_NODES.SHOW(${filteredPolls.length}) ]`}
+                    {activeTab === 'all' ? `[ HOT_NODES.SHOW(${filteredPolls.length}) ]` : `[ LOCAL_NODES.SHOW(${filteredPolls.length}) ]`}
                   </span>
                 </div>
 
@@ -285,10 +285,10 @@ export default function App() {
                     <div className="glass-panel p-16 border-dashed border-[#f0f0f0]/30 flex flex-col items-center text-center">
                       <h3 className="font-display text-4xl text-[#f0f0f0]/50 mb-4 tracking-tighter">// NULL_SET</h3>
                       <p className="text-xs uppercase tracking-widest text-[#f0f0f0]/50 mb-4">
-                        No existing votes match the current local buffer.
+                        {activeTab === 'all' ? "No existing votes match the current search." : "No local buffer votes match the current search."}
                       </p>
                       
-                      {searchQuery && (
+                      {searchQuery && activeTab === 'all' && (
                          <button onClick={executeDeepScan} className="brutal-btn !bg-[#ccff00]/10 !text-[#ccff00] !border-[#ccff00] hover:!bg-[#ccff00] hover:!text-[#0a0a0a] mb-8">
                             &gt; FORCE_ONCHAIN_DEEP_SCAN
                          </button>
