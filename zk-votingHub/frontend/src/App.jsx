@@ -58,7 +58,7 @@ export default function App() {
       const nextPollId = await contract.nextPollId();
       
       const loadedPolls = [];
-      const startId = nextPollId > 10n ? Number(nextPollId) - 10 : 0;
+      const startId = nextPollId > 6n ? Number(nextPollId) - 6 : 0;
       for (let i = Number(nextPollId) - 1; i >= startId; i--) {
         const poll = await contract.polls(i);
         if (poll.exists) {
