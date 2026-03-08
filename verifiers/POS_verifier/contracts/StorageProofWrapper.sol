@@ -2,11 +2,16 @@
 pragma solidity ^0.8.21;
 
 interface IUniversalVerifier {
-    function verifyProof(uint256 pollId, bytes calldata proofData) external returns (bool isValid, bytes32 nullifier);
+    function verifyProof(uint256 pollId, uint256 optionId, bytes calldata proofData) external returns (bool isValid, bytes32 nullifier);
 }
 
 interface IGroth16Verifier {
-    function verifyProof(uint[2] calldata _pA, uint[2][2] calldata _pB, uint[2] calldata _pC, uint[2] calldata _pubSignals) external view returns (bool);
+    function verifyProof(
+        uint[2] calldata _pA, 
+        uint[2][2] calldata _pB, 
+        uint[2] calldata _pC, 
+        uint[4] calldata _pubSignals
+    ) external view returns (bool);
 }
 
 contract StorageProofWrapper is IUniversalVerifier {
@@ -18,25 +23,26 @@ contract StorageProofWrapper is IUniversalVerifier {
         expectedStateRoot = _expectedStateRoot;
     }
 
-    function verifyProof(uint256 /*pollId*/, bytes calldata proofData) external view override returns (bool, bytes32) {
+    function verifyProof(uint256 pollId, uint256 optionId, bytes calldata proofData) external view override returns (bool, bytes32) {
         (
             uint[2] memory pA, 
             uint[2][2] memory pB, 
             uint[2] memory pC, 
-            uint256[] memory pubSignals
+            uint256[] memory decodedSignals
         ) = abi.decode(proofData, (uint[2], uint[2][2], uint[2], uint256[]));
 
-        require(pubSignals.length == 2, "StorageProof: Invalid signals count");
+        require(decodedSignals.length == 4, "StorageProof: Invalid signals count");
 
-        uint256 slot = pubSignals[0]; 
-        uint256 stateRoot = pubSignals[1]; 
+        uint256 clientNullifier = decodedSignals[0];
+        uint256 proofStateRoot  = decodedSignals[1]; 
+        
+        require(proofStateRoot == expectedStateRoot, "StorageProof: Invalid State Root Snapshot");
 
-        require(stateRoot == expectedStateRoot, "StorageProof: Invalid State Root Snapshot");
+        uint[4] memory pubSignals = [clientNullifier, expectedStateRoot, pollId, optionId];
+        
+        bool isValid = groth16Verifier.verifyProof(pA, pB, pC, pubSignals);
+        require(isValid, "StorageProof: Cryptographic proof is invalid or option mismatch");
 
-        uint[2] memory fixedPubSignals = [pubSignals[0], pubSignals[1]];
-        bool isValid = groth16Verifier.verifyProof(pA, pB, pC, fixedPubSignals);
-        require(isValid, "StorageProof: Cryptographic proof is invalid");
-
-        return (true, bytes32(slot));
+        return (true, bytes32(clientNullifier));
     }
 }

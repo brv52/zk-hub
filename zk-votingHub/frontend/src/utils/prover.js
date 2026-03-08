@@ -1,6 +1,3 @@
-import * as snarkjs from "snarkjs";
-import { ethers } from "ethers";
-
 export function resolveGateway(uri) {
     if (!uri) return null;
     if (uri.startsWith("ipfs://")) {
@@ -17,37 +14,49 @@ export async function generateAndEncodeProof(manifest, resolvedInputs) {
     const wasmUrl = resolveGateway(manifest.artifacts.wasmURI);
     const zkeyUrl = resolveGateway(manifest.artifacts.zkeyURI);
 
-    try {
-        console.log("Downloading ZK artifacts and generating proof... This may take a few seconds.");
-        const { proof, publicSignals } = await snarkjs.groth16.fullProve(
-            resolvedInputs, 
-            wasmUrl,
-            zkeyUrl
+    const [wasmRes, zkeyRes] = await Promise.all([
+        fetch(wasmUrl),
+        fetch(zkeyUrl)
+    ]);
+
+    if (!wasmRes.ok || !zkeyRes.ok) {
+        throw new Error("Failed to fetch ZK artifacts from IPFS gateway.");
+    }
+
+    const wasmBuffer = await wasmRes.arrayBuffer();
+    const zkeyBuffer = await zkeyRes.arrayBuffer();
+
+    return new Promise((resolve, reject) => {
+        const worker = new Worker(
+            new URL('./prover.worker.js', import.meta.url), 
+            { type: 'module' }
         );
 
-        console.log("Proof generated successfully!");
-        return encodeProofForEVM(proof, publicSignals);
+        const timeoutId = setTimeout(() => {
+            worker.terminate();
+            reject(new Error("Proof generation timed out. Malicious or heavy circuit detected."));
+        }, 600000);
 
-    } catch (error) {
-        console.error("SnarkJS Proving Error:", error);
-        throw new Error("Failed to generate Zero-Knowledge Proof. Check your inputs.");
-    }
-}
+        worker.onmessage = (event) => {
+            clearTimeout(timeoutId);
+            if (event.data.success) {
+                console.log("> PROOF_GENERATED_SUCCESSFULLY.");
+                resolve(event.data.payload);
+            } else {
+                reject(new Error("Isolated Proving Error: " + event.data.error));
+            }
+            worker.terminate();
+        };
 
-function encodeProofForEVM(proof, publicSignals) {
-    const pA = [proof.pi_a[0], proof.pi_a[1]];
-    const pB = [
-        [proof.pi_b[0][1], proof.pi_b[0][0]], 
-        [proof.pi_b[1][1], proof.pi_b[1][0]]
-    ];
-    const pC = [proof.pi_c[0], proof.pi_c[1]];
+        worker.onerror = (error) => {
+            clearTimeout(timeoutId);
+            reject(new Error("Fatal Worker Error: " + error.message));
+            worker.terminate();
+        };
 
-    const pubSignalsArray = publicSignals.map(signal => signal.toString());
-
-    const abiCoder = new ethers.AbiCoder();
-    
-    return abiCoder.encode(
-        ["uint256[2]", "uint256[2][2]", "uint256[2]", "uint256[]"],
-        [pA, pB, pC, pubSignalsArray]
-    );
+        worker.postMessage(
+            { resolvedInputs, wasmBuffer, zkeyBuffer },
+            [wasmBuffer, zkeyBuffer] 
+        );
+    });
 }

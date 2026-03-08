@@ -39,16 +39,20 @@ module.exports = async function builder(code, options) {
             },
 	    printErrorMessage : function() {
 		errStr += getMessage() + "\n";
+                // console.error(getMessage());
 	    },
 	    writeBufferMessage : function() {
 			const msg = getMessage();
+			// Any calls to `log()` will always end with a `\n`, so that's when we print and reset
 			if (msg === "\n") {
 				console.log(msgStr);
 				msgStr = "";
 			} else {
+				// If we've buffered other content, put a space in between the items
 				if (msgStr !== "") {
 					msgStr += " "
 				}
+				// Then append the message to the message we are creating
 				msgStr += msg;
 			}
 	    },
@@ -61,6 +65,15 @@ module.exports = async function builder(code, options) {
 
     const sanityCheck =
         options
+//        options &&
+//        (
+//            options.sanityCheck ||
+//            options.logGetSignal ||
+//            options.logSetSignal ||
+//            options.logStartComponent ||
+//            options.logFinishComponent
+//        );
+
     
     wc = new WitnessCalculator(instance, sanityCheck);
     return wc;
@@ -82,9 +95,11 @@ module.exports = async function builder(code, options) {
 	    arr[shared_rw_memory_size-1-j] = instance.exports.readSharedRWMemory(j);
 	}
 
+	// If we've buffered other content, put a space in between the items
 	if (msgStr !== "") {
 		msgStr += " "
 	}
+	// Then append the value to the message we are creating
 	msgStr += (fromArray32(arr).toString());
 	}
 
@@ -114,10 +129,13 @@ class WitnessCalculator {
     }
 
     async _doCalculateWitness(input_orig, sanityCheck) {
+	//input is assumed to be a map from signals to arrays of bigints
         this.instance.exports.init((this.sanityCheck || sanityCheck) ? 1 : 0);
 	let prefix = "";
 	var input = new Object();
+	//console.log("Input: ", input_orig);
 	qualify_input(prefix,input_orig,input);
+	//console.log("Input after: ",input);	
         const keys = Object.keys(input);
 	var input_counter = 0;
         keys.forEach( (k) => {
@@ -144,6 +162,7 @@ class WitnessCalculator {
                     this.instance.exports.setInputSignal(hMSB, hLSB,i);
 		    input_counter++;
 		} catch (err) {
+		    // console.log(`After adding signal ${i} of ${k}`)
                     throw new Error(err);
 		}
             }
@@ -196,25 +215,32 @@ class WitnessCalculator {
 	const buff = new  Uint8Array( buff32.buffer);
         await this._doCalculateWitness(input, sanityCheck);
   
+	//"wtns"
 	buff[0] = "w".charCodeAt(0)
 	buff[1] = "t".charCodeAt(0)
 	buff[2] = "n".charCodeAt(0)
 	buff[3] = "s".charCodeAt(0)
 
+	//version 2
 	buff32[1] = 2;
 
+	//number of sections: 2
 	buff32[2] = 2;
 
+	//id section 1
 	buff32[3] = 1;
 
 	const n8 = this.n32*4;
+	//id section 1 length in 64bytes
 	const idSection1length = 8 + n8;
 	const idSection1lengthHex = idSection1length.toString(16);
         buff32[4] = parseInt(idSection1lengthHex.slice(0,8), 16);
         buff32[5] = parseInt(idSection1lengthHex.slice(8,16), 16);
 
+	//this.n32
 	buff32[6] = n8;
 
+	//prime number
 	this.instance.exports.getRawPrime();
 
 	var pos = 7;
@@ -223,12 +249,15 @@ class WitnessCalculator {
         }
 	pos += this.n32;
 
+	// witness size
 	buff32[pos] = this.witnessSize;
 	pos++;
 
+	//id section 2
 	buff32[pos] = 2;
 	pos++;
 
+	// section 2 length
 	const idSection2length = n8*this.witnessSize;
 	const idSection2lengthHex = idSection2length.toString(16);
         buff32[pos] = parseInt(idSection2lengthHex.slice(0,8), 16);
@@ -290,7 +319,7 @@ function qualify_input(prefix,input,input1) {
 }
 
 function toArray32(rem,size) {
-    const res = [];
+    const res = []; //new Uint32Array(size); //has no unshift
     const radix = BigInt(0x100000000);
     while (rem) {
         res.unshift( Number(rem % radix));
@@ -306,7 +335,7 @@ function toArray32(rem,size) {
     return res;
 }
 
-function fromArray32(arr) {
+function fromArray32(arr) { //returns a BigInt
     var res = BigInt(0);
     const radix = BigInt(0x100000000);
     for (let i = 0; i<arr.length; i++) {

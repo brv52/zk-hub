@@ -12,7 +12,13 @@ export default defineConfig({
     tailwindcss(),
   ],
   define: {
-    global: 'window',
+    global: 'globalThis',
+    'process.env': {},
+  },
+  resolve: {
+    alias: {
+      buffer: 'buffer',
+    },
   },
   server: {
     port: 5173,

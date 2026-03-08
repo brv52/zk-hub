@@ -18,6 +18,7 @@ const config: HardhatUserConfig = {
             enabled: true,
             runs: 200,
           },
+          viaIR: true,
         },
       },
       {
@@ -47,7 +48,7 @@ const config: HardhatUserConfig = {
 
   paths: {
     sources: "./contracts",
-    tests: "./test",
+    tests: "./tests/contract",
     cache: "./cache",
     artifacts: "./artifacts",
   },

@@ -2,7 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self'; 
+      connect-src 'self' https://gateway.pinata.cloud https://ipfs.io window.ethereum wss://*.walletconnect.com https://*.infura.io https://*.alchemy.com https://*.publicnode.com https://api.gelato.digital https://*.gelato.cloud wss://*.gelato.cloud wss://*.zkpassport.id https://*.zkpassport.id;
+      worker-src 'self' blob:;
+      script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' 'unsafe-inline';
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      font-src 'self' data: https://fonts.gstatic.com;
+      img-src 'self' data: https://*;
+    " />
+    
     <title>zkVote - Anonymous Decentralized Voting</title>
     
     <script>
@@ -18,7 +30,7 @@
       }
     </script>
   </head>
-  <body class="bg-gray-50 antialiased text-gray-900 font-sans">
+  <body class="bg-[#0a0a0a] antialiased text-[#f0f0f0] font-sans">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.21;
 
 interface IUniversalVerifier {
-    function verifyProof(uint256 pollId, bytes calldata proofData) external returns (bool isValid, bytes32 nullifier);
+    function verifyProof(uint256 pollId, uint256 optionId, bytes calldata proofData) external returns (bool isValid, bytes32 nullifier);
 }
-
 
 interface IGroth16Verifier {
     function verifyProof(
         uint[2] calldata _pA,
         uint[2][2] calldata _pB,
         uint[2] calldata _pC,
-        uint[4] calldata _pubSignals
+        uint[5] calldata _pubSignals
     ) external view returns (bool);
 }
 
@@ -26,7 +25,7 @@ contract MembershipVerifier is IUniversalVerifier {
         expectedMinAge = _minAge;
     }
 
-    function verifyProof(uint256 pollId, bytes calldata proofData) external view override returns (bool isValid, bytes32 nullifier) {
+    function verifyProof(uint256 pollId, uint256 optionId, bytes calldata proofData) external view override returns (bool isValid, bytes32 nullifier) {
         (
             uint[2] memory pA,
             uint[2][2] memory pB,
@@ -34,24 +33,25 @@ contract MembershipVerifier is IUniversalVerifier {
             uint256[] memory decodedSignals
         ) = abi.decode(proofData, (uint[2], uint[2][2], uint[2], uint256[]));
 
-        require(decodedSignals.length >= 1, "Invalid public signals length");
+        require(decodedSignals.length == 5, "Invalid public signals length");
+        
         uint256 clientNullifier = decodedSignals[0];
+        uint256 proofMerkleRoot = decodedSignals[1];
+        
+        require(proofMerkleRoot == expectedMerkleRoot, "MembershipVerifier: Invalid Merkle Root");
 
-        uint[4] memory pubSignals = [
+        uint[5] memory pubSignals = [
             clientNullifier,
             expectedMerkleRoot,
             pollId,
-            expectedMinAge
+            expectedMinAge,
+            optionId
         ];
 
         isValid = groth16Verifier.verifyProof(pA, pB, pC, pubSignals);
-        require(isValid, "Invalid ZK Proof");
+        require(isValid, "Invalid ZK Proof: Option mismatch or bad math");
 
         nullifier = bytes32(clientNullifier);
         return (isValid, nullifier);
-    }
-
-    function updateRoot(uint256 _newRoot) external {
-        expectedMerkleRoot = _newRoot;
     }
 }

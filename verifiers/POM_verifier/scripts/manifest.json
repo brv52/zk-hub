@@ -3,8 +3,8 @@
   "name": "Thesis Membership Verifier",
   "verificationMethod": "merkle-tree",
   "artifacts": {
-    "wasmURI": "ipfs://QmWtHJo9BR31UDrF1ix38YACGMLLb3vvvTyVDnjmSWeieW",
-    "zkeyURI": "ipfs://QmNScBGkYfXfaQEdKtJoatXufvqvyVsrpreEqTYTb24GFy"
+    "wasmURI": "ipfs://QmejFt2976r7ocqemusVmcBakEF8P29QjbUTBv6u5mBTkr",
+    "zkeyURI": "ipfs://QmZr25puLDE1m26XvUreen1JwsbjyVWb6DtLypCY62ETug"
   },
   "config": {
     "treeSourceURI": "https://gateway.pinata.cloud/ipfs/QmVwSxfJMvAWMieeqMwUemTYMx9uip6ss7UuPSeM8ju5D7",

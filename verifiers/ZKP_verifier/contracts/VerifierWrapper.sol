@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.8.21;
 
 interface IUniversalVerifier {
-    function verifyProof(uint256 pollId, bytes calldata proofData) external returns (bool isValid, bytes32 nullifier);
+    function verifyProof(uint256 pollId, uint256 optionId, bytes calldata proofData) external returns (bool isValid, bytes32 nullifier);
 }
 
 struct ProofVerificationParams {
@@ -55,18 +54,22 @@ contract ZKPassportPollWrapper is IUniversalVerifier {
         expectedNationalities = _nationalities;
     }
 
-    function verifyProof(uint256 pollId, bytes calldata proofData) external override returns (bool, bytes32) {
+    function verifyProof(uint256 pollId, uint256 optionId, bytes calldata proofData) external override returns (bool, bytes32) {
         ProofVerificationParams memory params = abi.decode(proofData, (ProofVerificationParams));
         (bool isValid, bytes32 uniqueIdentifier, IZKPassportHelper helper) = zkPassportVerifier.verify(params);
+        
         require(isValid, "ZKPassport: Cryptographic proof is invalid");
+        
         require(
             helper.verifyScopes(params.proofVerificationData.publicInputs, expectedDomain, "voting-scope"),
             "ZKPassport: Invalid app domain or scope"
         );
+
         BoundData memory boundData = helper.getBoundData(params.committedInputs);
+        string memory expectedCustomData = string(abi.encodePacked(uint2str(pollId), "_", uint2str(optionId)));
         require(
-            keccak256(abi.encodePacked(boundData.customData)) == keccak256(abi.encodePacked(uint2str(pollId))),
-            "ZKPassport: Proof not bound to this Poll ID"
+            keccak256(abi.encodePacked(boundData.customData)) == keccak256(abi.encodePacked(expectedCustomData)),
+            "ZKPassport: Proof not bound to this Poll ID and Option ID"
         );
         require(
             helper.isAgeAboveOrEqual(expectedMinAge, params.committedInputs),
@@ -76,6 +79,7 @@ contract ZKPassportPollWrapper is IUniversalVerifier {
             helper.isNationalityIn(expectedNationalities, params.committedInputs),
             "ZKPassport: Voter nationality is not eligible for this poll"
         );
+        
         return (true, uniqueIdentifier);
     }
 

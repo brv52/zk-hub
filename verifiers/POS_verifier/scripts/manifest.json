@@ -3,8 +3,8 @@
   "name": "L2 State Storage Proof",
   "verificationMethod": "storage-proof",
   "artifacts": {
-    "wasmURI": "ipfs://QmTdM6JFZTE8s6VTfmcvtmH7PNYnMzRkqpfg1YUaBmWW5q",
-    "zkeyURI": "ipfs://QmXDaGoDgsT2XA1rXp6tWkyLbo1EjejdpeoaDAKY3mpRvv"
+    "wasmURI": "ipfs://QmbvDC7hxXBnexvnbaLdqzyxXmJ1wHbTwdR3TSmrt5TxN6",
+    "zkeyURI": "ipfs://QmdpptvYCLMex6CzpjL1tT76MptAB9PpijgGUaWtk6PndD"
   },
   "config": {
     "storageURI": "ipfs://QmawbJnhpZj1dV5Nb9MrLGFMz9UkBnMyEBXu6LqkmGY5uy",

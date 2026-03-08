@@ -1,81 +1,114 @@
 import React from 'react';
 
+// --- HELPERS & CONSTANTS ---
+const IGNORED_CONFIG_KEYS = new Set(['pollId', 'storageURI', 'depth']);
+
+const formatLabel = (key) => key.replace(/([A-Z])/g, "_$1").toUpperCase();
+
+const formatConfigValue = (key, value) => {
+  if (Array.isArray(value)) return value.join(", ");
+  if (typeof value === "boolean") return value ? "TRUE" : "FALSE";
+  
+  const lowerKey = key.toLowerCase();
+  if (lowerKey.startsWith("min")) return `>= ${value}`;
+  if (lowerKey.startsWith("max")) return `<= ${value}`;
+  
+  return value;
+};
+
+
+// --- SUB-COMPONENT: ZK Passport Constraints Viewer ---
+const ZKPassportConfigViewer = ({ config }) => {
+  const entries = Object.entries(config || {}).filter(
+    ([key]) => !IGNORED_CONFIG_KEYS.has(key)
+  );
+
+  if (entries.length === 0) return null;
+
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {entries.map(([key, value]) => (
+        <div key={key} className="border border-[#f0f0f0]/20 bg-[#0a0a0a]/50 p-4">
+          <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.2em] text-[#f0f0f0]/50">
+            {formatLabel(key)}
+          </span>
+          <span className="font-mono text-xs font-bold text-[#ccff00]">
+            {formatConfigValue(key, value)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+
+// --- SUB-COMPONENT: Crypto Input Matrix Viewer ---
+const CryptoInputMatrixViewer = ({ userInputs }) => {
+  const keys = Object.keys(userInputs || {});
+
+  if (keys.length === 0) return null;
+
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {keys.map((key) => (
+        <div key={key} className="flex flex-col border border-[#f0f0f0]/20 bg-[#0a0a0a]/50 p-4">
+          <div className="mb-2 flex items-start justify-between">
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#f0f0f0]/50">
+              {formatLabel(key)}
+            </span>
+            <span className="bg-[#ccff00] px-1 text-[8px] font-bold tracking-widest text-[#0a0a0a]">
+              PRIVATE
+            </span>
+          </div>
+          <span className="font-mono text-xs uppercase text-[#f0f0f0]">
+            TYPE: {userInputs[key]}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+
+// --- MAIN COMPONENT ---
 export default function PollManifestViewer({ manifest }) {
   if (!manifest) return null;
 
   const isZKPassport = manifest.verificationMethod === "zkpassport";
 
   return (
-    <div className="glass-panel p-6 border-[#f0f0f0]/30 mb-8 relative">
-      <div className="absolute top-0 right-0 p-2 border-l border-b border-[#f0f0f0]/20 bg-[#0a0a0a]/80">
-        <span className="font-mono text-[8px] text-[#ccff00] uppercase tracking-[0.3em] font-bold">
+    <div className="glass-panel relative mb-8 border-[#f0f0f0]/30 p-6">
+      
+      {/* Security Level Badge */}
+      <div className="absolute right-0 top-0 border-b border-l border-[#f0f0f0]/20 bg-[#0a0a0a]/80 p-2">
+        <span className="font-mono text-[8px] font-bold uppercase tracking-[0.3em] text-[#ccff00]">
           {isZKPassport ? "SEC_LEVEL: BIO" : "SEC_LEVEL: CRYPTO"}
         </span>
       </div>
 
-      <div className="border-b border-[#f0f0f0]/20 pb-4 mb-6">
-        <h3 className="font-display text-2xl font-black uppercase text-[#f0f0f0] tracking-widest mb-1">
+      {/* Header Info */}
+      <div className="mb-6 border-b border-[#f0f0f0]/20 pb-4">
+        <h3 className="mb-1 font-display text-2xl font-black uppercase tracking-widest text-[#f0f0f0]">
           {manifest.name || "UNNAMED_INSTANCE"}
         </h3>
-        <p className="font-mono text-[10px] text-[#f0f0f0]/50 uppercase tracking-[0.3em]">
+        <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#f0f0f0]/50">
           VERIFICATION_MODULE: {manifest.verificationMethod}
         </p>
       </div>
 
+      {/* Dynamic Matrix View */}
       <div>
-        <h4 className="font-mono text-xs font-bold text-[#f0f0f0] uppercase tracking-widest mb-4 border-l-2 border-[#ccff00] pl-3">
-            {isZKPassport ? "// IDENTITY_CONSTRAINTS" : "// CRYPTO_INPUT_MATRIX"}
+        <h4 className="mb-4 border-l-2 border-[#ccff00] pl-3 font-mono text-xs font-bold uppercase tracking-widest text-[#f0f0f0]">
+          {isZKPassport ? "// IDENTITY_CONSTRAINTS" : "// CRYPTO_INPUT_MATRIX"}
         </h4>
         
         {isZKPassport ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(manifest.config || {}).map(([key, value]) => {
-              // Пропускаем технические поля, если они вдруг оказались в конфиге
-              if (key === 'pollId' || key === 'storageURI' || key === 'depth') return null;
-
-              // Превращаем camelCase ключи в киберпанк-формат (minAge -> MIN_AGE)
-              const displayKey = key.replace(/([A-Z])/g, "_$1").toUpperCase();
-
-              // Умное форматирование значения
-              let displayValue = value;
-              if (Array.isArray(value)) {
-                displayValue = value.join(", ");
-              } else if (typeof value === "boolean") {
-                displayValue = value ? "TRUE" : "FALSE";
-              } else if (key.toLowerCase().startsWith("min")) {
-                displayValue = `>= ${value}`;
-              } else if (key.toLowerCase().startsWith("max")) {
-                displayValue = `<= ${value}`;
-              }
-
-              return (
-                <div key={key} className="border border-[#f0f0f0]/20 p-4 bg-[#0a0a0a]/50">
-                  <span className="block font-mono text-[10px] text-[#f0f0f0]/50 uppercase tracking-[0.2em] mb-1">
-                    {displayKey}
-                  </span>
-                  <span className="font-mono text-xs text-[#ccff00] font-bold">
-                    {displayValue}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+          <ZKPassportConfigViewer config={manifest.config} />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.keys(manifest.userInputs || {}).map((key) => (
-              <div key={key} className="border border-[#f0f0f0]/20 p-4 bg-[#0a0a0a]/50 flex flex-col">
-                <div className="flex justify-between items-start mb-2">
-                  <span className="font-mono text-[10px] text-[#f0f0f0]/50 uppercase tracking-[0.2em]">
-                    {key.replace(/([A-Z])/g, "_$1").toUpperCase()}
-                  </span>
-                  <span className="text-[8px] bg-[#ccff00] text-[#0a0a0a] px-1 font-bold tracking-widest">PRIVATE</span>
-                </div>
-                <span className="font-mono text-xs text-[#f0f0f0] uppercase">TYPE: {manifest.userInputs[key]}</span>
-              </div>
-            ))}
-          </div>
+          <CryptoInputMatrixViewer userInputs={manifest.userInputs} />
         )}
       </div>
+      
     </div>
   );
 }

@@ -1,12 +1,41 @@
 export class BaseStrategy {
-    /**
-     * @param {Object} manifest - Full JSON manifest from IPFS
-     * @param {Object} userInputs - Data from user for proof generation
-     * @param {String} verifierAddress - Address of IUniversalVerifier contract
-     * @param {Object} provider - Ethers.js provider
-     * @returns {Object} Inputs ready for ZK-proof generation
-     */
     async resolve(manifest, userInputs, verifierAddress, provider) {
         throw new Error("Method 'resolve' must be implemented");
+    }
+
+    async fetchDataset(uri) {
+        if (!uri) throw new Error("Invalid or missing dataset URI.");
+        
+        const url = uri.startsWith("ipfs://") 
+            ? uri.replace("ipfs://", "https://gateway.pinata.cloud/ipfs/") 
+            : uri;
+            
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`Failed to fetch dataset from IPFS/HTTP. Status: ${response.status}`);
+        }
+        
+        return await response.json();
+    }
+
+    sanitizeCircuitInputs(rawData, expectedKeys) {
+        const cleanInputs = {};
+
+        for (const key of expectedKeys) {
+            const value = rawData[key];
+
+            if (value === undefined || value === null) {
+                throw new Error(`ZK_PAYLOAD_ERROR: Missing required circuit signal '${key}'`);
+            }
+
+            if (Array.isArray(value)) {
+                cleanInputs[key] = value.map(v => v.toString());
+            } else {
+                cleanInputs[key] = value.toString();
+            }
+        }
+
+        return cleanInputs;
     }
 }

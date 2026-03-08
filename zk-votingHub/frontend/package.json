@@ -10,6 +10,7 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@gelatocloud/gasless": "^0.0.12",
     "@tailwindcss/vite": "^4.2.1",
     "@zkpassport/sdk": "^0.12.5",
     "ethers": "^6.11.1",

@@ -10,29 +10,37 @@ export class ProofOfStorageStrategy extends BaseStrategy {
         
         const targetSlot = userInputs.slot;
         const targetValue = userInputs.value;
-        const recordIndex = storageState.findIndex(r => r.slot == targetSlot && r.value == targetValue);
+        const targetSlotStr = targetSlot.toString();
+        const targetValueStr = targetValue.toString();
+
+        const recordIndex = storageState.findIndex(r => 
+            r.slot.toString() === targetSlotStr && 
+            r.value.toString() === targetValueStr
+        );
         
         if (recordIndex === -1) throw new Error("Storage Proof: Slot and Value not found in State Root DB.");
 
         const treeData = await this.buildSMT(storageState, recordIndex, config.depth || 10);
 
-        resolvedInputs.slot = targetSlot.toString();
-        resolvedInputs.value = targetValue.toString();
-        resolvedInputs.pathElements = treeData.pathElements;
-        resolvedInputs.pathIndices = treeData.pathIndices;
-        resolvedInputs.stateRoot = treeData.calculatedRoot;
+        const allAvailableData = {
+            ...userInputs,
+            ...config,
+            pathElements: treeData.pathElements,
+            pathIndices: treeData.pathIndices,
+            stateRoot: treeData.calculatedRoot
+        }
 
-        delete resolvedInputs.storageURI;
-        delete resolvedInputs.depth;
-        delete resolvedInputs.pollId;
+        const expectedCircuitSignals = [
+            "stateRoot", 
+            "pollId", 
+            "optionId", 
+            "slot", 
+            "value", 
+            "pathElements", 
+            "pathIndices"
+        ];
 
-        return resolvedInputs;
-    }
-
-    async fetchDataset(uri) {
-        const url = uri.startsWith("ipfs://") ? uri.replace("ipfs://", "https://gateway.pinata.cloud/ipfs/") : uri;
-        const res = await fetch(url);
-        return await res.json();
+        return this.sanitizeCircuitInputs(allAvailableData, expectedCircuitSignals);
     }
 
     async buildSMT(storageState, targetIndex, depth) {

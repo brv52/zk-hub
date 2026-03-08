@@ -8,6 +8,7 @@ template Membership(depth) {
     signal input merkleRoot;
     signal input pollId;
     signal input expectedMinAge;
+    signal input optionId;
 
     signal input secret;
     signal input age;
@@ -15,6 +16,9 @@ template Membership(depth) {
     signal input pathIndices[depth];
 
     signal output nullifier;
+
+    component ageBits = Num2Bits(8);
+    ageBits.in <== age;
 
     component ageCheck = GreaterEqThan(8);
     ageCheck.in[0] <== age;
@@ -58,6 +62,8 @@ template Membership(depth) {
     nullifierHash.inputs[0] <== secret;
     nullifierHash.inputs[1] <== pollId;
     nullifier <== nullifierHash.out;
+
+    signal optionIdSquared <== optionId * optionId;
 }
 
-component main {public [merkleRoot, pollId, expectedMinAge]} = Membership(10);
+component main {public [merkleRoot, pollId, expectedMinAge, optionId]} = Membership(10);
