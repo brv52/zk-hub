@@ -3,8 +3,8 @@ import React from 'react';
 export default function TopNav({ account, connectWallet, resetView }) {
   return (
     <header className="absolute top-0 left-0 z-50 flex w-full items-start justify-between p-4 md:p-6 pointer-events-none">
-      <button 
-        onClick={resetView} 
+      <button
+        onClick={resetView}
         className="group flex flex-col items-start pointer-events-auto cursor-pointer mix-blend-difference"
       >
         <span className="font-display text-3xl font-black leading-none tracking-tighter transition-none group-hover:text-[#ccff00]">ZK//</span>

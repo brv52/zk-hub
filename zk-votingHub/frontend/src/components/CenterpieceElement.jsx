@@ -14,10 +14,10 @@ export default function CenterpieceArt({ view, isLoading }) {
 
   return (
     <div className="pointer-events-none fixed inset-0 -z-0 flex w-full h-full items-center justify-center bg-[#0a0a0a]">
-      
-      <img 
-        src={activeImage} 
-        alt={`System Background for ${view || 'dashboard'} view`} 
+
+      <img
+        src={activeImage}
+        alt={`System Background for ${view || 'dashboard'} view`}
         className="w-full h-full p-8 md:w-2/3 md:h-2/3 md:p-0 object-contain opacity-50 mix-blend-screen transition-opacity duration-0"
       />
 

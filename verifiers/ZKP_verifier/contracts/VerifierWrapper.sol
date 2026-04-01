@@ -2,9 +2,9 @@
 pragma solidity ^0.8.21;
 
 interface IUniversalVerifier {
-    function verifyProof (
-        uint256 pollId, 
-        uint256 optionId, 
+    function verifyProof(
+        uint256 pollId,
+        uint256 optionId,
         bytes calldata proofData,
         bytes calldata verifierConfig
     ) external returns (bool isValid, bytes32 nullifier);
@@ -37,66 +37,103 @@ struct BoundData {
 }
 
 interface IZKPassportHelper {
-    function verifyScopes(bytes32[] calldata publicInputs, string calldata domain, string calldata scope) external pure returns (bool);
-    function isAgeAboveOrEqual(uint8 minAge, bytes calldata committedInputs) external pure returns (bool);
-    function getBoundData(bytes calldata committedInputs) external pure returns (BoundData memory);
-    function isNationalityIn(string[] memory countryList, bytes calldata committedInputs) external pure returns (bool);
+    function verifyScopes(
+        bytes32[] calldata publicInputs,
+        string calldata domain,
+        string calldata scope
+    ) external pure returns (bool);
+    function isAgeAboveOrEqual(
+        uint8 minAge,
+        bytes calldata committedInputs
+    ) external pure returns (bool);
+    function getBoundData(
+        bytes calldata committedInputs
+    ) external pure returns (BoundData memory);
+    function isNationalityIn(
+        string[] memory countryList,
+        bytes calldata committedInputs
+    ) external pure returns (bool);
 }
 
 interface IZKPassportVerifier {
-    function verify(ProofVerificationParams calldata params) external returns (bool verified, bytes32 uniqueIdentifier, IZKPassportHelper helper);
+    function verify(
+        ProofVerificationParams calldata params
+    )
+        external
+        returns (
+            bool verified,
+            bytes32 uniqueIdentifier,
+            IZKPassportHelper helper
+        );
 }
 
 contract ZKPassportPollWrapper is IUniversalVerifier {
-    IZKPassportVerifier public constant zkPassportVerifier = IZKPassportVerifier(0x1D000001000EFD9a6371f4d90bB8920D5431c0D8);
+    IZKPassportVerifier public constant zkPassportVerifier =
+        IZKPassportVerifier(0x1D000001000EFD9a6371f4d90bB8920D5431c0D8);
 
-    constructor() { }
+    constructor() {}
 
     function verifyProof(
-        uint256 pollId, 
-        uint256 optionId, 
+        uint256 pollId,
+        uint256 optionId,
         bytes calldata proofData,
         bytes calldata verifierConfig
     ) external override returns (bool isValid, bytes32 nullifier) {
-        // 1. Декодируем универсальный конфиг опроса
         (
-            string memory expectedDomain, 
-            uint8 expectedMinAge, 
+            string memory expectedDomain,
+            uint8 expectedMinAge,
             string[] memory expectedNationalities
         ) = abi.decode(verifierConfig, (string, uint8, string[]));
 
-        ProofVerificationParams memory params = abi.decode(proofData, (ProofVerificationParams));
+        ProofVerificationParams memory params = abi.decode(
+            proofData,
+            (ProofVerificationParams)
+        );
 
-        // 2. Базовая проверка криптографии паспорта (Подпись государства)
-        (bool verified, bytes32 uniqueIdentifier, IZKPassportHelper helper) = zkPassportVerifier.verify(params);
+        (
+            bool verified,
+            bytes32 uniqueIdentifier,
+            IZKPassportHelper helper
+        ) = zkPassportVerifier.verify(params);
         require(verified, "ZKPassport: Core verification failed");
 
-        // 3. Проверка домена и скоупа (защита от replay-атак между приложениями)
         require(
-            helper.verifyScopes(params.proofVerificationData.publicInputs, expectedDomain, "voting-scope"),
+            helper.verifyScopes(
+                params.proofVerificationData.publicInputs,
+                expectedDomain,
+                "voting-scope"
+            ),
             "ZKPassport: Invalid app domain or scope"
         );
 
-        // 4. Привязка пруфа к конкретному голосованию и опции
-        BoundData memory boundData = helper.getBoundData(params.committedInputs);
-        string memory expectedCustomData = string(abi.encodePacked(uint2str(pollId), "_", uint2str(optionId)));
+        BoundData memory boundData = helper.getBoundData(
+            params.committedInputs
+        );
+        string memory expectedCustomData = string(
+            abi.encodePacked(uint2str(pollId), "_", uint2str(optionId))
+        );
         require(
-            keccak256(abi.encodePacked(boundData.customData)) == keccak256(abi.encodePacked(expectedCustomData)),
+            keccak256(abi.encodePacked(boundData.customData)) ==
+                keccak256(abi.encodePacked(expectedCustomData)),
             "ZKPassport: Proof not bound to this Poll ID and Option ID"
         );
 
-        // 5. ЭВРИСТИКА: Опциональная проверка возраста
         if (expectedMinAge > 0) {
             require(
-                helper.isAgeAboveOrEqual(expectedMinAge, params.committedInputs),
+                helper.isAgeAboveOrEqual(
+                    expectedMinAge,
+                    params.committedInputs
+                ),
                 "ZKPassport: Voter does not meet age requirement"
             );
         }
 
-        // 6. ЭВРИСТИКА: Опциональная проверка гражданства
         if (expectedNationalities.length > 0) {
             require(
-                helper.isNationalityIn(expectedNationalities, params.committedInputs),
+                helper.isNationalityIn(
+                    expectedNationalities,
+                    params.committedInputs
+                ),
                 "ZKPassport: Voter nationality is not eligible for this poll"
             );
         }
@@ -104,16 +141,21 @@ contract ZKPassportPollWrapper is IUniversalVerifier {
         return (true, uniqueIdentifier);
     }
 
-    function uint2str(uint256 _i) internal pure returns (string memory _uintAsString) {
+    function uint2str(
+        uint256 _i
+    ) internal pure returns (string memory _uintAsString) {
         if (_i == 0) return "0";
         uint256 j = _i;
         uint256 len;
-        while (j != 0) { len++; j /= 10; }
+        while (j != 0) {
+            len++;
+            j /= 10;
+        }
         bytes memory bstr = new bytes(len);
         uint256 k = len;
         while (_i != 0) {
             k = k - 1;
-            uint8 temp = (48 + uint8(_i - _i / 10 * 10));
+            uint8 temp = (48 + uint8(_i - (_i / 10) * 10));
             bytes1 b1 = bytes1(temp);
             bstr[k] = b1;
             _i /= 10;

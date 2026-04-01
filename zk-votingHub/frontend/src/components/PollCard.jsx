@@ -35,7 +35,7 @@ export default function PollCard({ poll, myVoteStatus, onGoToVote }) {
           </p>
         )}
 
-        <button 
+        <button
           onClick={() => onGoToVote(poll.id)}
           className="brutal-btn w-full text-center"
         >

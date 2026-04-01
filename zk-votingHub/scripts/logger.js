@@ -8,7 +8,7 @@ function saveDeploymentInfo(type, key, value) {
     if (fs.existsSync(LOG_FILE)) {
         data = JSON.parse(fs.readFileSync(LOG_FILE, 'utf8'));
     }
-    
+
     if (!data[type]) data[type] = {};
     data[type][key] = value;
     data[type].timestamp = new Date().toISOString();

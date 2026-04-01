@@ -77,7 +77,6 @@ export const ProvingEngineRouter = (props) => {
     setZkInputs, submitLocalVote, isProving, txStatus, executeBlockchainTx
   } = props;
 
-  // BRANCH 1: ZK Passport Flow
   if (method === "zkpassport") {
     if (startPassportFlow) {
       return (
@@ -112,11 +111,9 @@ export const ProvingEngineRouter = (props) => {
     );
   }
 
-  // BRANCH 2: Local Generation Flow
   return (
     <div className="mb-6 space-y-6 border-t border-[#f0f0f0]/20 pt-6">
       <h4 className="mb-4 border-l-2 border-[#ccff00] pl-3 font-mono text-xs font-bold uppercase tracking-widest text-[#f0f0f0]">
-        // INJECT_LOCAL_VARIABLES
       </h4>
       {displayInputs.map((input) => (
         <div key={input.id}>

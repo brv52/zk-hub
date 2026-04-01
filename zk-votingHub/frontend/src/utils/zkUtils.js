@@ -25,7 +25,7 @@ export const fetchManifest = async (uri) => {
 
 export const pinDatasetToIPFS = async (safeDataset) => {
     const PINATA_JWT = import.meta.env.VITE_PINATA_JWT || process.env.REACT_APP_PINATA_JWT;
-    
+
     if (!PINATA_JWT) {
         throw new Error("Pinata JWT token is missing from environment variables.");
     }

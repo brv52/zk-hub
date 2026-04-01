@@ -19,7 +19,13 @@
     overflow-x: hidden;
   }
 
-  h1, h2, h3, h4, h5, h6, .font-display {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  .font-display {
     font-family: var(--font-display);
     line-height: 1.1;
   }
@@ -32,14 +38,17 @@
   ::-webkit-scrollbar {
     width: 10px;
   }
+
   ::-webkit-scrollbar-track {
     background: var(--void);
     border-left: 1px solid rgba(240, 240, 240, 0.1);
   }
+
   ::-webkit-scrollbar-thumb {
     background: var(--raw);
     border: 1px solid var(--void);
   }
+
   ::-webkit-scrollbar-thumb:hover {
     background: var(--acid);
   }
@@ -54,7 +63,7 @@
   .brutal-btn {
     @apply transition-none border border-[#f0f0f0] text-[#f0f0f0] uppercase text-xs tracking-[0.2em] font-bold py-3 px-6 cursor-pointer relative bg-transparent;
   }
-  
+
   .brutal-btn:hover {
     @apply bg-[#f0f0f0] text-[#0a0a0a] translate-x-[-2px] translate-y-[-2px] shadow-[4px_4px_0px_0px_#ccff00] border-[#ccff00];
   }
@@ -73,12 +82,37 @@
 }
 
 @keyframes glitch-text {
-  0% { opacity: 1; transform: translateX(0); }
-  20% { opacity: 0.8; transform: translateX(-2px); }
-  40% { opacity: 1; transform: translateX(2px); }
-  60% { opacity: 0.9; transform: translateX(-1px); color: var(--acid); }
-  80% { opacity: 1; transform: translateX(1px); color: var(--raw); }
-  100% { opacity: 1; transform: translateX(0); }
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  20% {
+    opacity: 0.8;
+    transform: translateX(-2px);
+  }
+
+  40% {
+    opacity: 1;
+    transform: translateX(2px);
+  }
+
+  60% {
+    opacity: 0.9;
+    transform: translateX(-1px);
+    color: var(--acid);
+  }
+
+  80% {
+    opacity: 1;
+    transform: translateX(1px);
+    color: var(--raw);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .animate-glitch {

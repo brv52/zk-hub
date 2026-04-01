@@ -10,18 +10,15 @@ describe("VotingHub Production Security Suite", function () {
     async function deployHubFixture() {
         const [admin, organizer, voter, attacker, forwarder] = await ethers.getSigners();
 
-        // 1. Deploy Mocks
         const ForwarderFactory = await ethers.getContractFactory("MockForwarder");
         const mockForwarder = await ForwarderFactory.deploy();
 
         const VerifierFactory = await ethers.getContractFactory("MockVerifier");
         const mockVerifier = await VerifierFactory.deploy();
 
-        // 2. Deploy VotingHub
         const VotingHub = await ethers.getContractFactory("VotingHub");
         const votingHub = await VotingHub.deploy(await mockForwarder.getAddress());
 
-        // 3. Setup Roles
         await votingHub.grantRole(ORGANIZER_ROLE, organizer.address);
 
         return { votingHub, mockVerifier, mockForwarder, admin, organizer, voter, attacker, forwarder };
@@ -37,10 +34,10 @@ describe("VotingHub Production Security Suite", function () {
         it("Should allow admin to update the forwarder", async function () {
             const { votingHub, admin, attacker } = await loadFixture(deployHubFixture);
             const newForwarder = ethers.Wallet.createRandom().address;
-            
+
             await expect(votingHub.connect(admin).updateForwarder(newForwarder))
                 .to.emit(votingHub, "ForwarderUpdated").withArgs(newForwarder);
-            
+
             expect(await votingHub.isTrustedForwarder(newForwarder)).to.be.true;
         });
     });
@@ -65,7 +62,7 @@ describe("VotingHub Production Security Suite", function () {
             const { votingHub, organizer, voter, mockVerifier } = await loadFixture(deployHubFixture);
             await votingHub.connect(organizer).createPoll(await mockVerifier.getAddress(), "Q", ["A", "B"], "U", 3600, true);
             await votingHub.fundPollGas(0, { value: INITIAL_FUNDING });
-            const proof = ethers.AbiCoder.defaultAbiCoder().encode(["uint[2]", "uint[2][2]", "uint[2]", "uint256[]"], [[0,0], [[0,0],[0,0]], [0,0], [ethers.ZeroHash, 0, 0, 0]]);
+            const proof = ethers.AbiCoder.defaultAbiCoder().encode(["uint[2]", "uint[2][2]", "uint[2]", "uint256[]"], [[0, 0], [[0, 0], [0, 0]], [0, 0], [ethers.ZeroHash, 0, 0, 0]]);
             await votingHub.connect(voter).vote(0, 0, proof);
             expect(await votingHub.pollGasBalances(0)).to.equal(INITIAL_FUNDING - GAS_CREDIT);
         });
@@ -73,7 +70,7 @@ describe("VotingHub Production Security Suite", function () {
         it("Should fail when insolvent", async function () {
             const { votingHub, organizer, voter, mockVerifier } = await loadFixture(deployHubFixture);
             await votingHub.connect(organizer).createPoll(await mockVerifier.getAddress(), "Q", ["A", "B"], "U", 3600, true);
-            const proof = ethers.AbiCoder.defaultAbiCoder().encode(["uint[2]", "uint[2][2]", "uint[2]", "uint256[]"], [[0,0], [[0,0],[0,0]], [0,0], [ethers.id("n1"), 0, 0, 0]]);
+            const proof = ethers.AbiCoder.defaultAbiCoder().encode(["uint[2]", "uint[2][2]", "uint[2]", "uint256[]"], [[0, 0], [[0, 0], [0, 0]], [0, 0], [ethers.id("n1"), 0, 0, 0]]);
             await expect(votingHub.connect(voter).vote(0, 0, proof)).to.be.revertedWith("INSOLVENT: Reservoir empty");
         });
     });
@@ -82,7 +79,7 @@ describe("VotingHub Production Security Suite", function () {
         it("Should block double-voting", async function () {
             const { votingHub, organizer, voter, mockVerifier } = await loadFixture(deployHubFixture);
             await votingHub.connect(organizer).createPoll(await mockVerifier.getAddress(), "Q", ["A", "B"], "U", 3600, false);
-            const proof = ethers.AbiCoder.defaultAbiCoder().encode(["uint[2]", "uint[2][2]", "uint[2]", "uint256[]"], [[0,0], [[0,0],[0,0]], [0,0], [ethers.id("n1"), 0, 0, 0]]);
+            const proof = ethers.AbiCoder.defaultAbiCoder().encode(["uint[2]", "uint[2][2]", "uint[2]", "uint256[]"], [[0, 0], [[0, 0], [0, 0]], [0, 0], [ethers.id("n1"), 0, 0, 0]]);
             await votingHub.connect(voter).vote(0, 0, proof);
             await expect(votingHub.connect(voter).vote(0, 0, proof)).to.be.revertedWith("Already voted");
         });
@@ -101,7 +98,7 @@ describe("VotingHub Production Security Suite", function () {
         it("Should resolve sender via forwarder", async function () {
             const { votingHub, organizer, voter, mockForwarder, mockVerifier } = await loadFixture(deployHubFixture);
             await votingHub.connect(organizer).createPoll(await mockVerifier.getAddress(), "Q", ["A", "B"], "U", 3600, false);
-            const proof = ethers.AbiCoder.defaultAbiCoder().encode(["uint[2]", "uint[2][2]", "uint[2]", "uint256[]"], [[0,0], [[0,0],[0,0]], [0,0], [ethers.id("mtx"), 0, 0, 0]]);
+            const proof = ethers.AbiCoder.defaultAbiCoder().encode(["uint[2]", "uint[2][2]", "uint[2]", "uint256[]"], [[0, 0], [[0, 0], [0, 0]], [0, 0], [ethers.id("mtx"), 0, 0, 0]]);
             const data = votingHub.interface.encodeFunctionData("vote", [0, 0, proof]);
             await expect(mockForwarder.connect(voter).execute(await votingHub.getAddress(), data)).to.not.be.reverted;
             expect(await votingHub.getVotes(0, 0)).to.equal(1);

@@ -8,7 +8,7 @@ async function main() {
     const groth16 = await Groth16Verifier.deploy();
     await groth16.waitForDeployment();
     const groth16Address = await groth16.getAddress();
-    
+
     console.log(`> GROTH16_CORE_DEPLOYED: ${groth16Address}`);
 
     const StorageWrapper = await ethers.getContractFactory("StorageProofWrapper");
@@ -17,7 +17,7 @@ async function main() {
     const wrapperAddress = await wrapper.getAddress();
 
     console.log(`> STATELESS_WRAPPER_DEPLOYED: ${wrapperAddress}`);
-    
+
     saveDeploymentInfo('ProofOfStorage', 'contractAddress', wrapperAddress);
     console.log("> STATUS: SUCCESS");
 }

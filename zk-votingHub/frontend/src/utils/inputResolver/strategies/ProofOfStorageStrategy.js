@@ -3,7 +3,7 @@ import { buildPoseidon } from "circomlibjs";
 import { ethers } from "ethers";
 
 export class ProofOfStorageStrategy extends BaseStrategy {
-    
+
     async buildDatabase(manifest, rawDataset) {
         const depth = manifest.config.depth || 10;
         const poseidon = await buildPoseidon();
@@ -37,7 +37,7 @@ export class ProofOfStorageStrategy extends BaseStrategy {
             if (manifest.config[key] !== undefined) return manifest.config[key];
             throw new Error(`CONFIG_ERROR: Missing key [${key}] in manifest config.`);
         });
-        
+
         const abiCoder = ethers.AbiCoder.defaultAbiCoder();
         const encodedConfig = abiCoder.encode(manifest.configABI, configValues);
 
@@ -47,21 +47,20 @@ export class ProofOfStorageStrategy extends BaseStrategy {
     async resolve(manifest, userInputs, verifierAddress, provider, databaseURI) {
         const config = manifest.config || {};
         const storageState = await this.fetchDataset(databaseURI);
-        
+
         const keyField = manifest.registrySchema[0].name;
         const valueField = manifest.registrySchema[1].name;
 
         const targetKeyStr = userInputs[keyField].toString();
         const targetValueStr = userInputs[valueField].toString();
 
-        const recordIndex = storageState.findIndex(r => 
-            r[keyField].toString() === targetKeyStr && 
+        const recordIndex = storageState.findIndex(r =>
+            r[keyField].toString() === targetKeyStr &&
             r[valueField].toString() === targetValueStr
         );
-        
+
         if (recordIndex === -1) throw new Error(`Storage Proof: [${keyField}] and [${valueField}] not found in DB.`);
 
-        // Эвристическая валидация всех порогов (min/max)
         for (const [confKey, confValue] of Object.entries(config)) {
             const lowerConfKey = confKey.toLowerCase();
             if (lowerConfKey.startsWith('min') && Number(targetValueStr) < Number(confValue)) {
@@ -74,21 +73,17 @@ export class ProofOfStorageStrategy extends BaseStrategy {
 
         const treeData = await this.buildSMT(storageState, recordIndex, config.depth || 10, keyField, valueField);
 
-        // Формируем супер-объект со всеми возможными ключами
         const allAvailableData = {
             ...userInputs,
             ...config,
             pathElements: treeData.pathElements,
             pathIndices: treeData.pathIndices,
-            // Прокидываем корень под всеми популярными именами (фильтр ниже оставит только нужное)
             stateRoot: treeData.calculatedRoot,
             merkleRoot: treeData.calculatedRoot,
             expectedStateRoot: treeData.calculatedRoot,
             root: treeData.calculatedRoot
         };
 
-        // ЭВРИСТИКА: Если манифест имеет circuitSignals, используем его строго.
-        // Иначе пытаемся угадать (fallback).
         let expectedSignals = manifest.circuitSignals;
         if (!expectedSignals) {
             console.warn("WARNING: manifest.circuitSignals is missing. Using heuristic fallback.");
@@ -107,7 +102,7 @@ export class ProofOfStorageStrategy extends BaseStrategy {
 
         let currentLevel = storageState.map(r => hashFn(BigInt(r[keyField]), BigInt(r[valueField])));
         let currentIndex = targetIndex;
-        
+
         const pathElements = [];
         const pathIndices = [];
         let emptyNode = BigInt(0);
@@ -115,9 +110,9 @@ export class ProofOfStorageStrategy extends BaseStrategy {
         for (let i = 0; i < depth; i++) {
             const isRightNode = currentIndex % 2 !== 0;
             const siblingIndex = isRightNode ? currentIndex - 1 : currentIndex + 1;
-            
+
             pathIndices.push(isRightNode ? 1 : 0);
-            
+
             const siblingValue = siblingIndex < currentLevel.length ? currentLevel[siblingIndex] : emptyNode;
             pathElements.push(siblingValue.toString());
 

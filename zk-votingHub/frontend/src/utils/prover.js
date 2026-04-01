@@ -28,7 +28,7 @@ export async function generateAndEncodeProof(manifest, resolvedInputs) {
 
     return new Promise((resolve, reject) => {
         const worker = new Worker(
-            new URL('./prover.worker.js', import.meta.url), 
+            new URL('./prover.worker.js', import.meta.url),
             { type: 'module' }
         );
 
@@ -40,7 +40,6 @@ export async function generateAndEncodeProof(manifest, resolvedInputs) {
         worker.onmessage = (event) => {
             clearTimeout(timeoutId);
             if (event.data.success) {
-                console.log("> PROOF_GENERATED_SUCCESSFULLY.");
                 resolve(event.data.payload);
             } else {
                 reject(new Error("Isolated Proving Error: " + event.data.error));
@@ -56,7 +55,7 @@ export async function generateAndEncodeProof(manifest, resolvedInputs) {
 
         worker.postMessage(
             { resolvedInputs, wasmBuffer, zkeyBuffer },
-            [wasmBuffer, zkeyBuffer] 
+            [wasmBuffer, zkeyBuffer]
         );
     });
 }

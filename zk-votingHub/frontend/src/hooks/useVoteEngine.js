@@ -9,9 +9,6 @@ import { createModularAccountAlchemyClient } from "@alchemy/aa-alchemy";
 import { createWalletClient, custom } from "viem";
 import { sepolia } from "viem/chains";
 
-// --- ИСПРАВЛЕНИЕ СОВМЕСТИМОСТИ VIEM v2 И ALCHEMY ---
-// Патчим стандартный объект sepolia, возвращая структуру RPC, 
-// которую под капотом ожидает Account Kit для сборки URL с твоим API_KEY.
 const alchemySepolia = {
     ...sepolia,
     rpcUrls: {
@@ -226,13 +223,12 @@ export function useVoteEngine(pollId, votingHubAddress, provider) {
                     });
 
                     const receipt = await alchemyClient.getUserOperationReceipt(uoHash);
-                    
+
                     if (receipt && !receipt.success) {
                         throw new Error("SPONSOR_RESERVOIR_EMPTY_OR_REVERTED");
                     }
 
                     setTxStatus("> SUCCESS: VOTE_CAST_VIA_SMART_ACCOUNT.");
-                    console.log(`> BUNDLED_TX_HASH: ${txHash}`);
                     isAlchemySuccess = true;
                     handleVoteSuccess();
 
@@ -244,11 +240,11 @@ export function useVoteEngine(pollId, votingHubAddress, provider) {
             }
 
             if (!isSponsored || (!isAlchemySuccess && isSponsored)) {
-                setTxStatus(isSponsored 
+                setTxStatus(isSponsored
                     ? "> AWAITING_WALLET_CONFIRMATION (FALLBACK: USER PAYS)..."
                     : "> AWAITING_WALLET_CONFIRMATION (USER PAYS GAS)..."
                 );
-                
+
                 const tx = await hubContract.vote(pollId, selectedOption, encodedProofData, { gasLimit: 5000000 });
                 setTxStatus("> VERIFYING_BLOCK_INCLUSION...");
                 await tx.wait();

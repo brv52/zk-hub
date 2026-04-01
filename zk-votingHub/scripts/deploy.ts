@@ -12,10 +12,10 @@ async function main() {
     const balance = await ethers.provider.getBalance(deployer.address);
     console.log(`> OPERATOR: ${deployer.address}`);
     console.log(`> BALANCE: ${ethers.formatEther(balance)} ETH`);
-    
+
     console.log("> EXECUTING_DEPLOYMENT_ROUTINE...");
     const VotingHub = await ethers.getContractFactory("VotingHub");
-    
+
     const votingHub = await VotingHub.deploy();
     await votingHub.waitForDeployment();
 
@@ -26,26 +26,26 @@ async function main() {
 
     saveFrontendFiles(votingHubAddress);
 
-    // if (network.name !== "hardhat" && network.name !== "localhost") {
-    //     console.log("> AWAITING_BLOCK_CONFIRMATIONS...");
-    //     await votingHub.deploymentTransaction()?.wait(5);
-        
-    //     console.log("> VERIFYING_ON_EXPLORER...");
-    //     try {
-    //         await run("verify:verify", {
-    //             address: votingHubAddress,
-    //             constructorArguments: [], // Массив аргументов теперь пустой
-    //         });
-    //         console.log("> VERIFICATION_SUCCESS");
-    //     } catch (error: any) {
-    //         if (error.message.toLowerCase().includes("already verified")) {
-    //             console.log("> STATUS: ALREADY_VERIFIED");
-    //         } else {
-    //             console.error("> VERIFICATION_ERROR:", error.message);
-    //         }
-    //     }
-    // }
-    
+    if (network.name !== "hardhat" && network.name !== "localhost") {
+        console.log("> AWAITING_BLOCK_CONFIRMATIONS...");
+        await votingHub.deploymentTransaction()?.wait(5);
+
+        console.log("> VERIFYING_ON_EXPLORER...");
+        try {
+            await run("verify:verify", {
+                address: votingHubAddress,
+                constructorArguments: [],
+            });
+            console.log("> VERIFICATION_SUCCESS");
+        } catch (error: any) {
+            if (error.message.toLowerCase().includes("already verified")) {
+                console.log("> STATUS: ALREADY_VERIFIED");
+            } else {
+                console.error("> VERIFICATION_ERROR:", error.message);
+            }
+        }
+    }
+
     console.log("> DEPLOYMENT_SEQUENCE_COMPLETED");
 }
 

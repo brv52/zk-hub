@@ -1,4 +1,4 @@
-(function() {
+(function () {
     const g = typeof self !== 'undefined' ? self : globalThis;
     if (typeof g.window === 'undefined') {
         Object.defineProperty(g, 'window', { value: g });

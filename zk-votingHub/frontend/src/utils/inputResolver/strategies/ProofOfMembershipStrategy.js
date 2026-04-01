@@ -42,10 +42,10 @@ export class ProofOfMembershipStrategy extends BaseStrategy {
         const depth = manifest.config.depth || 10;
         const arity = manifest.config.arity || 2;
         const hashFn = await this._getHashFunction(manifest.config.hashAlgorithm);
-        
+
         const safeDataset = rawDataset.map(row => {
             const inputs = this._prepareInputs(manifest, row);
-            return hashFn(inputs).toString(); 
+            return hashFn(inputs).toString();
         });
 
         let currentLevel = safeDataset.map(leaf => BigInt(leaf));
@@ -67,14 +67,14 @@ export class ProofOfMembershipStrategy extends BaseStrategy {
         }
 
         const calculatedRoot = currentLevel[0].toString();
-        
+
         const configValues = manifest.configKeys.map(key => {
             if (key.toLowerCase().includes('root')) return calculatedRoot;
             const value = manifest.config[key];
             if (value === undefined || value === null) throw new Error(`CONFIG_ERROR: ${key}`);
             return value;
         });
-        
+
         const abiCoder = ethers.AbiCoder.defaultAbiCoder();
         const encodedConfig = abiCoder.encode(manifest.configABI, configValues);
 
@@ -91,10 +91,8 @@ export class ProofOfMembershipStrategy extends BaseStrategy {
             formattedUserInputs[key] = this._formatInputToBigInt(userInputs[key], schemaField?.type).toString();
         }
 
-        // Эвристическая проверка порогов (если добавлены)
         for (const [confKey, confValue] of Object.entries(manifest.config || {})) {
             if (confKey.toLowerCase().startsWith('min')) {
-                // Пытаемся найти поле 'value' (или аналогичное числовое), чтобы сверить порог
                 const valKey = Object.keys(formattedUserInputs).find(k => manifest.registrySchema?.find(f => f.name === k)?.type === 'number');
                 if (valKey && Number(userInputs[valKey]) < Number(confValue)) {
                     throw new Error(`INELIGIBLE: ${valKey} is below required ${confKey}`);
@@ -108,7 +106,6 @@ export class ProofOfMembershipStrategy extends BaseStrategy {
             ...manifest.config,
             pathElements: treeData.pathElements,
             pathIndices: treeData.pathIndices,
-            // Дублируем корень под всеми именами
             merkleRoot: treeData.calculatedRoot,
             stateRoot: treeData.calculatedRoot,
             expectedMerkleRoot: treeData.calculatedRoot,
@@ -135,7 +132,7 @@ export class ProofOfMembershipStrategy extends BaseStrategy {
         const myLeaf = hashFn(orderedInputs).toString();
 
         let currentIndex = publicLeaves.findIndex(leaf => leaf.toString() === myLeaf);
-        
+
         if (currentIndex === -1) {
             throw new Error("Your generated credential does not exist in the authorized registry.");
         }
@@ -144,12 +141,12 @@ export class ProofOfMembershipStrategy extends BaseStrategy {
         const pathIndices = [];
         let currentLevel = publicLeaves.map(l => BigInt(l));
         let currentEmptyNodeValue = BigInt(manifest.config.emptyNodeValue || "0");
-        
+
         for (let i = 0; i < depth; i++) {
             const chunkIndex = Math.floor(currentIndex / arity);
             const positionInChunk = currentIndex % arity;
             pathIndices.push(positionInChunk);
-            
+
             const siblings = [];
             for (let k = 0; k < arity; k++) {
                 if (k === positionInChunk) continue;

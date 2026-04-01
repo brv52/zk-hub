@@ -1,10 +1,7 @@
 import React from "react";
 
-// --- HELPERS ---
-// Extracts camelCase keys into SNAKE_CASE for the brutalist UI
 const formatLabel = (key) => key.replace(/([A-Z])/g, "_$1").toUpperCase();
 
-// --- SUB-COMPONENT: Individual Input Field ---
 const ManifestInput = ({ inputKey, type, value, onChange }) => {
   const isNumber = type === "number";
 
@@ -24,16 +21,14 @@ const ManifestInput = ({ inputKey, type, value, onChange }) => {
   );
 };
 
-// --- SUB-COMPONENT: Submit Action ---
 const SubmitButton = ({ isProving, onSubmit }) => (
   <button
     onClick={onSubmit}
     disabled={isProving}
-    className={`brutal-btn w-full !py-4 ${
-      isProving
+    className={`brutal-btn w-full !py-4 ${isProving
         ? "pointer-events-none !border-[#f0f0f0]/20 !text-[#f0f0f0]/20"
         : "!border-[#ccff00] !text-[#ccff00] hover:!bg-[#ccff00] hover:!text-[#0a0a0a]"
-    }`}
+      }`}
   >
     {isProving ? (
       <span className="animate-glitch">[ OBFUSCATING_DATA... ]</span>
@@ -43,7 +38,6 @@ const SubmitButton = ({ isProving, onSubmit }) => (
   </button>
 );
 
-// --- MAIN COMPONENT ---
 export default function ManifestUI({ manifest, zkInputs, setZkInputs, isProving, onSubmit }) {
   const inputKeys = manifest?.inputOrder || Object.keys(manifest?.userInputs || {});
 
@@ -65,9 +59,8 @@ export default function ManifestUI({ manifest, zkInputs, setZkInputs, isProving,
   return (
     <div className="mb-6 space-y-6 border-t border-[#f0f0f0]/20 pt-6">
       <h4 className="border-l-2 border-[#ccff00] pl-3 font-mono text-xs font-bold uppercase tracking-widest text-[#f0f0f0]">
-        // INJECT_PAYLOAD_DATA
       </h4>
-      
+
       <div className="space-y-4">
         {inputKeys.map((key) => (
           <ManifestInput

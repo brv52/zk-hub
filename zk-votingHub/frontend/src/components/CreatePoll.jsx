@@ -3,42 +3,36 @@ import { useCreatePoll } from '../hooks/useCreatePoll';
 import { StatusBanner, DurationConfig } from './CreatePollSubComponents';
 
 const validateDatasetField = (field, value) => {
-        if (value === undefined || value === null || value.toString().trim() === '') return 'REQUIRED_FIELD';
-        const strVal = value.toString().trim();
-        const nameLabel = field.name.toLowerCase();
+    if (value === undefined || value === null || value.toString().trim() === '') return 'REQUIRED_FIELD';
+    const strVal = value.toString().trim();
+    const nameLabel = field.name.toLowerCase();
 
-        // 1. Адреса
-        if (nameLabel.includes('address') && !/^0x[a-fA-F0-9]{40}$/.test(strVal)) return 'INVALID_ETH_ADDRESS';
+    if (nameLabel.includes('address') && !/^0x[a-fA-F0-9]{40}$/.test(strVal)) return 'INVALID_ETH_ADDRESS';
 
-        // 2. Секреты и энтропия
-        if (nameLabel.includes('secret') || nameLabel.includes('hash') || nameLabel.includes('commitment') || nameLabel.includes('key') || nameLabel.includes('nullifier')) {
-            if (strVal.length < 16) return 'WEAK_ENTROPY_MIN_16_CHARS';
-            if (strVal.startsWith('0x') && !/^0x[a-fA-F0-9]+$/.test(strVal)) return 'MALFORMED_HEX_STRING';
+    if (nameLabel.includes('secret') || nameLabel.includes('hash') || nameLabel.includes('commitment') || nameLabel.includes('key') || nameLabel.includes('nullifier')) {
+        if (strVal.length < 16) return 'WEAK_ENTROPY_MIN_16_CHARS';
+        if (strVal.startsWith('0x') && !/^0x[a-fA-F0-9]+$/.test(strVal)) return 'MALFORMED_HEX_STRING';
+    }
+
+    if (nameLabel.includes('slot')) {
+        if (!/^\d+$/.test(strVal) && !/^0x[a-fA-F0-9]+$/.test(strVal)) {
+            return 'SLOT_MUST_BE_NUMERIC_OR_HEX';
         }
-
-        // 3. Слоты хранилища (Storage Slots) - ДОБАВЛЕНО
-        // Слот обязан быть парсируемым в BigInt (число или hex)
-        if (nameLabel.includes('slot')) {
-            if (!/^\d+$/.test(strVal) && !/^0x[a-fA-F0-9]+$/.test(strVal)) {
-                return 'SLOT_MUST_BE_NUMERIC_OR_HEX';
-            }
-            try {
-                BigInt(strVal); // Финальная проверка
-            } catch (e) {
-                return 'INVALID_BIGINT_FORMAT';
-            }
+        try {
+            BigInt(strVal);
+        } catch (e) {
+            return 'INVALID_BIGINT_FORMAT';
         }
+    }
 
-        // 4. Обычные числа (возраст, баланс, ID)
-        if (field.type === 'number' || nameLabel.includes('age') || nameLabel.includes('balance') || nameLabel.includes('amount') || nameLabel.includes('id')) {
-            if (isNaN(Number(strVal)) || Number(strVal) < 0) return 'INVALID_NUMERIC_VALUE';
-        }
+    if (field.type === 'number' || nameLabel.includes('age') || nameLabel.includes('balance') || nameLabel.includes('amount') || nameLabel.includes('id')) {
+        if (isNaN(Number(strVal)) || Number(strVal) < 0) return 'INVALID_NUMERIC_VALUE';
+    }
 
-        return null; // Всё четко
-    };
+    return null;
+};
 
 
-// Компактный и строгий Toggle
 const ToggleElement = ({ options, active, onChange }) => (
     <div className="flex w-full border border-[#f0f0f0]/20 bg-black/40 font-mono text-[10px] uppercase tracking-widest backdrop-blur-sm">
         {options.map((opt, index) => (
@@ -47,8 +41,8 @@ const ToggleElement = ({ options, active, onChange }) => (
                 type="button"
                 onClick={() => onChange(opt.value)}
                 className={`flex-1 py-2.5 transition-colors border-r border-[#f0f0f0]/10 last:border-r-0
-                    ${active === opt.value 
-                        ? 'bg-[#ccff00] text-[#0a0a0a] font-bold shadow-[inset_0_0_8px_rgba(0,0,0,0.3)]' 
+                    ${active === opt.value
+                        ? 'bg-[#ccff00] text-[#0a0a0a] font-bold shadow-[inset_0_0_8px_rgba(0,0,0,0.3)]'
                         : 'text-[#f0f0f0]/50 hover:bg-[#f0f0f0]/10 hover:text-[#ccff00]'
                     }
                 `}
@@ -59,7 +53,6 @@ const ToggleElement = ({ options, active, onChange }) => (
     </div>
 );
 
-// Исправленный Select
 const TerminalSelect = ({ value, onChange, options, defaultLabel }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
@@ -75,7 +68,7 @@ const TerminalSelect = ({ value, onChange, options, defaultLabel }) => {
 
     return (
         <div className="relative group w-full" ref={dropdownRef}>
-            <div 
+            <div
                 onClick={() => setIsOpen(!isOpen)}
                 className={`w-full border bg-black/60 p-3 font-mono text-[11px] uppercase tracking-widest outline-none transition-colors cursor-pointer flex justify-between items-center backdrop-blur-sm
                     ${isOpen ? 'border-[#ccff00] text-[#ccff00]' : 'border-[#f0f0f0]/20 text-[#f0f0f0]/50 hover:border-[#ccff00]/50'}
@@ -94,8 +87,8 @@ const TerminalSelect = ({ value, onChange, options, defaultLabel }) => {
                             key={opt.id}
                             onClick={() => { onChange(opt.id); setIsOpen(false); }}
                             className={`p-3 font-mono text-[10px] uppercase tracking-widest cursor-pointer border-b border-[#f0f0f0]/10 last:border-0 transition-colors
-                                ${value === opt.id 
-                                    ? 'bg-[#ccff00]/20 text-[#ccff00] font-bold border-l-2 border-l-[#ccff00]' 
+                                ${value === opt.id
+                                    ? 'bg-[#ccff00]/20 text-[#ccff00] font-bold border-l-2 border-l-[#ccff00]'
                                     : 'text-[#f0f0f0]/70 hover:bg-[#ccff00]/10 hover:text-[#ccff00] hover:border-l-2 hover:border-l-[#ccff00]'
                                 }
                             `}
@@ -131,7 +124,6 @@ export default function CreatePoll({ votingHubAddress, provider }) {
         setDurationUnit(unit);
     };
 
-    // --- ПРОВЕРКА ВАЛИДНОСТИ ВСЕЙ ТАБЛИЦЫ ---
     const isManualDataValid = () => {
         if (!manifest || !manifest.registrySchema) return true;
         for (let i = 0; i < manualRows.length; i++) {
@@ -143,13 +135,13 @@ export default function CreatePoll({ votingHubAddress, provider }) {
     };
 
     const requiresDB = manifest && manifest.registrySchema && manifest.registrySchema.length > 0;
-    
+
     const canSubmit = manifest && (!requiresDB || (dbMode === 'file' ? !!csvFile : isManualDataValid()));
 
     return (
         <div className="mx-auto w-full max-w-3xl space-y-6 pb-12">
-            
-            {/* --- HEADER --- */}
+
+            { }
             <div className="mb-6 flex flex-col items-start justify-between gap-3 border-b border-[#f0f0f0]/20 pb-4 md:flex-row md:items-end">
                 <div>
                     <h2 className="font-display text-3xl font-black uppercase tracking-widest text-[#ccff00] drop-shadow-[0_0_10px_rgba(204,255,0,0.2)]">
@@ -168,7 +160,7 @@ export default function CreatePoll({ votingHubAddress, provider }) {
 
             <form onSubmit={handleSubmit} className="space-y-6">
 
-                {/* --- PANEL 1: CORE METADATA --- */}
+                { }
                 <div className="glass-panel relative z-40 p-5 md:p-6 !overflow-visible">
                     <h3 className="mb-6 font-display text-xl font-black uppercase tracking-widest text-[#f0f0f0] flex items-center gap-2">
                         <span className="text-[#ccff00] opacity-50">&gt;</span> CORE_METADATA
@@ -224,7 +216,7 @@ export default function CreatePoll({ votingHubAddress, provider }) {
                     </div>
                 </div>
 
-                {/* --- PANEL 2: VERIFIER CONFIGURATION --- */}
+                { }
                 <div className="glass-panel relative z-50 p-5 md:p-6 !overflow-visible">
                     <div className="mb-6 flex items-center justify-between">
                         <h3 className="font-display text-xl font-black uppercase tracking-widest text-[#f0f0f0] flex items-center gap-2">
@@ -245,7 +237,7 @@ export default function CreatePoll({ votingHubAddress, provider }) {
 
                         <div>
                             {verifierMode === 'preset' ? (
-                                <TerminalSelect 
+                                <TerminalSelect
                                     value={formData.verifierAddress === PRESET_VERIFIERS[0].address ? PRESET_VERIFIERS[0].id : formData.verifierAddress === PRESET_VERIFIERS[1].address ? PRESET_VERIFIERS[1].id : formData.verifierAddress === PRESET_VERIFIERS[2].address ? PRESET_VERIFIERS[2].id : ""}
                                     onChange={(val) => handlePresetSelect(val)}
                                     options={PRESET_VERIFIERS}
@@ -269,13 +261,13 @@ export default function CreatePoll({ votingHubAddress, provider }) {
                     </div>
                 </div>
 
-                {/* --- PANEL 3: DATABASE INJECTION (WITH VALIDATION) --- */}
+                { }
                 {manifest && manifest.registrySchema && manifest.registrySchema.length > 0 && (
                     <div className="glass-panel relative z-30 p-5 md:p-6 animate-fade-in !overflow-visible">
                         <div className="absolute right-0 top-0 border-b border-l border-[#ccff00]/30 bg-[#ccff00]/10 px-2 py-1 font-mono text-[8px] font-bold text-[#ccff00] tracking-widest">
                             SCHEMA_LOCK: ACTIVE
                         </div>
-                        
+
                         <h3 className="mb-2 font-display text-xl font-black uppercase tracking-widest text-[#f0f0f0] flex items-center gap-2">
                             <span className="text-[#ccff00] opacity-50">&gt;</span> DATABASE_INJECTION
                         </h3>
@@ -301,7 +293,7 @@ export default function CreatePoll({ votingHubAddress, provider }) {
                                         <span className="font-mono text-[8px] text-[#f0f0f0]/30 uppercase tracking-widest mt-1">
                                             SCHEMA: {manifest.registrySchema.map(s => s.name).join(', ')}
                                         </span>
-                                        {/* Уведомление о валидации CSV в процессе сборки */}
+                                        { }
                                         <span className="font-mono text-[8px] text-[#ccff00]/50 uppercase tracking-widest mt-4 border border-[#ccff00]/20 px-2 py-1">
                                             * CSV WILL BE VALIDATED DURING DEPLOYMENT
                                         </span>
@@ -326,7 +318,6 @@ export default function CreatePoll({ votingHubAddress, provider }) {
                                                         <td className="py-1 px-3 text-center text-[#f0f0f0]/30 border-r border-[#f0f0f0]/10">{idx + 1}</td>
                                                         {manifest.registrySchema.map(field => {
                                                             const value = row[field.name] || '';
-                                                            // Проверяем текущее поле
                                                             const errorMsg = validateDatasetField(field, value);
                                                             const hasError = errorMsg !== null && value !== ''; // Не показываем красным, пока пусто, но не пустим деплой
 
@@ -336,15 +327,15 @@ export default function CreatePoll({ votingHubAddress, provider }) {
                                                                         type={field.type === 'number' ? 'number' : 'text'}
                                                                         value={value}
                                                                         onChange={(e) => handleManualRowChange(idx, field.name, e.target.value)}
-                                                                        className={`w-full bg-transparent px-3 py-2.5 outline-none transition-colors placeholder:text-[#f0f0f0]/20
-                                                                            ${hasError 
-                                                                                ? 'text-red-400 focus:bg-red-500/10 border-b border-red-500/50' 
+                                                                        className={`w-full bg-transparent px-3 py-2.5 outline-none transition-colors placeholder:text-[#f0f0f0]/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+                                                                            ${hasError
+                                                                                ? 'text-red-400 focus:bg-red-500/10 border-b border-red-500/50'
                                                                                 : 'focus:bg-[#ccff00]/10 focus:text-[#ccff00] text-[#f0f0f0]'
                                                                             }
                                                                         `}
                                                                         placeholder={`[ ${field.name} ]`}
                                                                     />
-                                                                    {/* Иконка ошибки при наведении */}
+                                                                    { }
                                                                     {hasError && (
                                                                         <div className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 cursor-help font-bold" title={errorMsg}>
                                                                             !
@@ -370,9 +361,9 @@ export default function CreatePoll({ votingHubAddress, provider }) {
                                             </tbody>
                                         </table>
                                     </div>
-                                    <button 
-                                        type="button" 
-                                        onClick={addManualRow} 
+                                    <button
+                                        type="button"
+                                        onClick={addManualRow}
                                         className="font-mono text-[9px] uppercase tracking-widest text-[#ccff00]/70 hover:text-[#ccff00] transition-colors flex items-center gap-1"
                                     >
                                         <span className="text-lg leading-none">+</span> <span>ADD_RECORD</span>
@@ -383,7 +374,7 @@ export default function CreatePoll({ votingHubAddress, provider }) {
                     </div>
                 )}
 
-                {/* --- PANEL 4: NETWORK & LIFESPAN --- */}
+                { }
                 <div className="glass-panel relative z-20 p-5 md:p-6 !overflow-visible">
                     <h3 className="mb-6 font-display text-xl font-black uppercase tracking-widest text-[#f0f0f0] flex items-center gap-2">
                         <span className="text-[#ccff00] opacity-50">&gt;</span> NETWORK_LIFESPAN
@@ -402,7 +393,7 @@ export default function CreatePoll({ votingHubAddress, provider }) {
                                             : "STANDARD EXECUTION. VOTERS PAY NETWORK FEES."}
                                     </p>
                                 </div>
-                                
+
                                 <button
                                     type="button"
                                     onClick={() => setIsSponsored(!isSponsored)}
@@ -421,13 +412,13 @@ export default function CreatePoll({ votingHubAddress, provider }) {
                     </div>
                 </div>
 
-                {/* --- SUBMIT --- */}
+                { }
                 <button
                     type="submit"
                     disabled={isCreating || !canSubmit}
                     className={`brutal-btn w-full !py-4 !text-xs uppercase tracking-[0.3em] transition-all duration-300 relative z-10
-                        ${isCreating || !canSubmit 
-                            ? 'pointer-events-none !border-[#f0f0f0]/10 !text-[#f0f0f0]/20 bg-black/20' 
+                        ${isCreating || !canSubmit
+                            ? 'pointer-events-none !border-[#f0f0f0]/10 !text-[#f0f0f0]/20 bg-black/20'
                             : '!border-[#ccff00] !text-[#ccff00] hover:!bg-[#ccff00] hover:!text-black hover:shadow-[0_0_20px_rgba(204,255,0,0.4)]'
                         }
                     `}
@@ -439,17 +430,17 @@ export default function CreatePoll({ votingHubAddress, provider }) {
                     )}
                 </button>
 
-                {/* Уведомления блокировки */}
+                { }
                 {!manifest && !isManifestLoading && formData.manifestURI && (
-                     <div className="text-center font-mono text-[8px] uppercase tracking-widest text-red-500/70 animate-pulse">
-                         &gt; AWAITING_VALID_VERIFIER_CONFIGURATION
-                     </div>
+                    <div className="text-center font-mono text-[8px] uppercase tracking-widest text-red-500/70 animate-pulse">
+                        &gt; AWAITING_VALID_VERIFIER_CONFIGURATION
+                    </div>
                 )}
-                
+
                 {manifest && dbMode === 'manual' && !isManualDataValid() && (
                     <div className="text-center font-mono text-[8px] uppercase tracking-widest text-red-500/70 animate-pulse">
-                         &gt; FIX_DATASET_ERRORS_TO_PROCEED
-                     </div>
+                        &gt; FIX_DATASET_ERRORS_TO_PROCEED
+                    </div>
                 )}
 
             </form>

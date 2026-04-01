@@ -11,9 +11,8 @@ export default function GasRefillStation({ pollId, votingHubAddress, provider })
         <div className="glass-panel border-[#ccff00]/30 bg-[#ccff00]/5 p-6 shadow-[0_0_20px_rgba(204,255,0,0.05)]">
             <div className="mb-4 flex items-center justify-between">
                 <h4 className="font-display text-lg font-black uppercase tracking-tighter text-[#ccff00]">
-                    // RESERVOIR_MGMT_CMD
                 </h4>
-                <button 
+                <button
                     onClick={fetchBalance}
                     className="font-mono text-[9px] uppercase tracking-widest text-[#f0f0f0]/40 hover:text-[#ccff00]"
                 >
@@ -31,11 +30,11 @@ export default function GasRefillStation({ pollId, votingHubAddress, provider })
                     <span className="font-mono text-xl font-black text-[#f0f0f0]">{currentBalance} <span className="text-[10px] opacity-40">ETH</span></span>
                 </div>
             </div>
-            
+
             <div className="space-y-4">
                 <div className="relative">
                     <label className="mb-2 block font-mono text-[9px] uppercase tracking-widest text-[#f0f0f0]/30">Injection_Quantity (SEP_ETH):</label>
-                    <input 
+                    <input
                         type="number"
                         step="0.005"
                         value={customAmount}
@@ -44,7 +43,7 @@ export default function GasRefillStation({ pollId, votingHubAddress, provider })
                     />
                 </div>
 
-                <button 
+                <button
                     onClick={() => topUp(customAmount)}
                     disabled={isFunding || !customAmount}
                     className={`brutal-btn w-full !py-4 !text-xs ${isFunding ? 'opacity-50' : '!border-[#ccff00] !text-[#ccff00] hover:!bg-[#ccff00] hover:!text-black'}`}
@@ -54,7 +53,7 @@ export default function GasRefillStation({ pollId, votingHubAddress, provider })
             </div>
 
             <p className="mt-4 font-mono text-[8px] leading-relaxed text-[#f0f0f0]/30">
-                &gt; WARN: GAS IS DEDUCTED DYNAMICALLY BASED ON NETWORK CONGESTION.<br/>
+                &gt; WARN: GAS IS DEDUCTED DYNAMICALLY BASED ON NETWORK CONGESTION.<br />
                 &gt; ALGORITHM: (gasUsed * tx.gasprice). UNUSED FUNDS SECURED IN CONTRACT.
             </p>
         </div>

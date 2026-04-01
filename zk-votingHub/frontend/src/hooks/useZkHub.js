@@ -55,7 +55,7 @@ export function useZkHub(HUB_ADDRESS) {
         window.ethereum.on('chainChanged', () => window.location.reload());
       }
 
-      refreshMyVotes(); 
+      refreshMyVotes();
     };
 
     init();
@@ -119,7 +119,33 @@ export function useZkHub(HUB_ADDRESS) {
           });
         }
       }
+
+      const localVotes = JSON.parse(localStorage.getItem("zkVotes") || "{}");
+      const votedIds = Object.keys(localVotes).map(Number);
+
+      const missingVotedIds = votedIds.filter(id => id < startId);
+
+      if (missingVotedIds.length > 0) {
+        await Promise.all(missingVotedIds.map(async (id) => {
+          try {
+            const poll = await contract.polls(id);
+            if (poll.exists) {
+              loadedPolls.push({
+                id,
+                question: poll.question,
+                creator: poll.creator,
+                verifier: poll.verifierContract
+              });
+            }
+          } catch (e) {
+            console.error(`Failed to fetch archived poll ${id}:`, e);
+          }
+        }));
+      }
+
+      loadedPolls.sort((a, b) => b.id - a.id);
       setPolls(loadedPolls);
+
     } catch (error) {
       console.error('Failed to fetch polls:', error);
     } finally {
@@ -127,7 +153,6 @@ export function useZkHub(HUB_ADDRESS) {
     }
   };
 
-  // --- ДОБАВЛЕНО: Автоматическая догрузка недостающих логов ---
   useEffect(() => {
     if (activeTab === 'my_votes' && provider) {
       const votedIds = Object.keys(myVotes).map(Number);
@@ -136,14 +161,12 @@ export function useZkHub(HUB_ADDRESS) {
       const contract = new ethers.Contract(HUB_ADDRESS, abiData.abi, provider);
 
       setPolls(prevPolls => {
-        // Ищем ID, которые есть в localStorage, но которых нет в массиве polls
         const missingIds = votedIds.filter(id => !prevPolls.some(p => p.id === id));
-        
+
         if (missingIds.length === 0) return prevPolls; // Всё уже загружено
 
         setIsLoadingPolls(true);
-        
-        // Параллельно подтягиваем только недостающие контракты
+
         Promise.all(missingIds.map(async (id) => {
           try {
             const poll = await contract.polls(id);
@@ -159,7 +182,6 @@ export function useZkHub(HUB_ADDRESS) {
           if (validResults.length > 0) {
             setPolls(current => {
               const combined = [...current, ...validResults];
-              // Убираем дубликаты (на всякий случай) и сортируем по убыванию (новые сверху)
               const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
               return unique.sort((a, b) => b.id - a.id);
             });

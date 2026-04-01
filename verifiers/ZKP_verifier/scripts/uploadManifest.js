@@ -7,15 +7,15 @@ const pinataSecretApiKey = process.env.PINATA_SECRET_API_KEY;
 
 const manifest = {
     version: "2.0.0",
-    name: "Universal ZKPassport Verifier", // Универсальное имя
+    name: "Universal ZKPassport Verifier",
     verificationMethod: "zkpassport",
     artifacts: {},
     config: {
         domain: "localhost",
-        minAge: 18,           // 0 означает, что возраст не важен
-        inNationality: ["CZE", "RUS"]    // Пустой массив означает, что гражданство не важно
+        minAge: 18,
+        inNationality: ["CZE", "RUS"]
     },
-    registrySchema: [],      // База данных не нужна
+    registrySchema: [],
     configABI: ["string", "uint8", "string[]"],
     configKeys: ["domain", "minAge", "inNationality"],
     userInputs: {},
@@ -34,7 +34,7 @@ async function main() {
                 pinata_secret_api_key: pinataSecretApiKey
             }
         });
-        
+
         const manifestURI = `ipfs://${res.data.IpfsHash}`;
         console.log(`> MANIFEST_URI: ${manifestURI}`);
         saveDeploymentInfo('ZKPassport', 'manifestURI', manifestURI);

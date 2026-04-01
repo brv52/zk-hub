@@ -18,10 +18,10 @@ export function useGasManagement(pollId, votingHubAddress, provider) {
         try {
             const browserProvider = new ethers.BrowserProvider(window.ethereum);
             const signer = await browserProvider.getSigner();
-            
+
             const contract = new ethers.Contract(votingHubAddress, abi.abi, signer);
-            const tx = await contract.fundPollGas(pollId, { 
-                value: ethers.parseEther(amountInEth) 
+            const tx = await contract.fundPollGas(pollId, {
+                value: ethers.parseEther(amountInEth)
             });
             await tx.wait();
             await fetchBalance();

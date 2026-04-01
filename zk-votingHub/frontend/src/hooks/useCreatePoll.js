@@ -128,29 +128,24 @@ export function useCreatePoll(votingHubAddress, provider) {
         const strVal = value.toString().trim();
         const nameLabel = field.name.toLowerCase();
 
-        // 1. Адреса
         if (nameLabel.includes('address') && !/^0x[a-fA-F0-9]{40}$/.test(strVal)) return 'INVALID_ETH_ADDRESS';
 
-        // 2. Секреты и энтропия
         if (nameLabel.includes('secret') || nameLabel.includes('hash') || nameLabel.includes('commitment') || nameLabel.includes('key') || nameLabel.includes('nullifier')) {
             if (strVal.length < 16) return 'WEAK_ENTROPY_MIN_16_CHARS';
             if (strVal.startsWith('0x') && !/^0x[a-fA-F0-9]+$/.test(strVal)) return 'MALFORMED_HEX_STRING';
         }
 
-        // 3. Слоты хранилища (Storage Slots) - ДОБАВЛЕНО
-        // Слот обязан быть парсируемым в BigInt (число или hex)
         if (nameLabel.includes('slot')) {
             if (!/^\d+$/.test(strVal) && !/^0x[a-fA-F0-9]+$/.test(strVal)) {
                 return 'SLOT_MUST_BE_NUMERIC_OR_HEX';
             }
             try {
-                BigInt(strVal); // Финальная проверка
+                BigInt(strVal);
             } catch (e) {
                 return 'INVALID_BIGINT_FORMAT';
             }
         }
 
-        // 4. Обычные числа (возраст, баланс, ID)
         if (field.type === 'number' || nameLabel.includes('age') || nameLabel.includes('balance') || nameLabel.includes('amount') || nameLabel.includes('id')) {
             if (isNaN(Number(strVal)) || Number(strVal) < 0) return 'INVALID_NUMERIC_VALUE';
         }

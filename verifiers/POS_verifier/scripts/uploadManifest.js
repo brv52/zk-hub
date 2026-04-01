@@ -21,18 +21,18 @@ async function main() {
 
     const manifest = {
         version: "2.0.0",
-        name: "L2 State Storage Verifier (Gated)", // Уточнили название
+        name: "L2 State Storage Verifier (Gated)",
         verificationMethod: "storage-proof",
         artifacts: { wasmURI, zkeyURI },
         config: {
             depth: 10,
-            minThreshold: 100 // Дефолтный порог (например, 100 токенов)
+            minThreshold: 100
         },
         registrySchema: [
             { name: "slot", type: "string", label: "Storage Slot (User ID/Address)" },
             { name: "value", type: "number", label: "Storage Value (Token Balance)" }
         ],
-        configABI: ["uint256", "uint256"], // Добавили второй uint256 для порога
+        configABI: ["uint256", "uint256"],
         configKeys: ["expectedStateRoot", "minThreshold"],
         userInputs: { slot: "string", value: "number" },
         inputOrder: ["slot", "value"],
@@ -41,7 +41,7 @@ async function main() {
 
     const manifestPath = path.join(__dirname, "manifest.json");
     fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-    
+
     const manifestURI = await pinFileToIPFS(manifestPath, "POS_Manifest.json");
 
     console.log(`> MANIFEST_URI: ${manifestURI}`);

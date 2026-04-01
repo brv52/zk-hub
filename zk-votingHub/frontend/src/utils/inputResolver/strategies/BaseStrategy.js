@@ -9,8 +9,8 @@ export class BaseStrategy {
 
     async fetchDataset(uri) {
         if (!uri) throw new Error("Invalid or missing dataset URI.");
-        const url = uri.startsWith("ipfs://") 
-            ? uri.replace("ipfs://", "https://gateway.pinata.cloud/ipfs/") 
+        const url = uri.startsWith("ipfs://")
+            ? uri.replace("ipfs://", "https://gateway.pinata.cloud/ipfs/")
             : uri;
         const response = await fetch(url);
         if (!response.ok) throw new Error(`Failed to fetch dataset from IPFS/HTTP. Status: ${response.status}`);

@@ -3,7 +3,6 @@ import { ethers } from 'ethers';
 import { ZKPassport } from '@zkpassport/sdk';
 import { QRCodeSVG } from "qrcode.react";
 
-// --- CUSTOM HOOK: Business Logic & Blockchain Interaction ---
 function useZKPassportAuth({ pollId, selectedOption, requirements, executeBlockchainTx, onVoteSuccess }) {
     const [qrUrl, setQrUrl] = useState("");
     const [status, setStatus] = useState("> INIT_SDK_BRIDGE...");
@@ -31,10 +30,8 @@ function useZKPassportAuth({ pollId, selectedOption, requirements, executeBlockc
 
                 if (requirements) {
                     for (const [key, value] of Object.entries(requirements)) {
-                        // Пропускаем технические поля, если они случайно попали
                         if (key === 'pollId' || key === 'domain') continue;
 
-                        // Парсим префикс (первые 2-3 буквы) и сам атрибут (с маленькой буквы)
                         if (key.startsWith('min')) {
                             const attr = key.replace('min', '').toLowerCase(); // minAge -> age
                             builder = builder.gte(attr, Number(value));
@@ -134,7 +131,6 @@ function useZKPassportAuth({ pollId, selectedOption, requirements, executeBlockc
     return { qrUrl, status, isError };
 }
 
-// --- SUB-COMPONENT: QR Code & Deep Link Display ---
 const QRCodeDisplay = ({ qrUrl }) => (
     <div className="mb-8 flex flex-col items-center">
         <div className="mb-6 border-4 border-[#0a0a0a] bg-[#f0f0f0] p-4">
@@ -160,7 +156,6 @@ const QRCodeDisplay = ({ qrUrl }) => (
     </div>
 );
 
-// --- SUB-COMPONENT: Status Indicator & Recovery ---
 const SystemStatusLog = ({ status, isError }) => {
     const baseClasses = "p-4 font-mono text-xs uppercase tracking-widest border transition-none";
     let statusClasses = "bg-transparent text-[#f0f0f0] border-[#f0f0f0]/30 animate-pulse";
@@ -189,7 +184,6 @@ const SystemStatusLog = ({ status, isError }) => {
     );
 };
 
-// --- MAIN WRAPPER COMPONENT ---
 export default function ZKPassportStation(props) {
     const { qrUrl, status, isError } = useZKPassportAuth(props);
 

