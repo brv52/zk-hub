@@ -13,9 +13,12 @@ export function useGasManagement(pollId, votingHubAddress, provider) {
     };
 
     const topUp = async (amountInEth) => {
+        if (!window.ethereum) throw new Error("Wallet not found");
         setIsFunding(true);
         try {
-            const signer = await provider.getSigner();
+            const browserProvider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await browserProvider.getSigner();
+            
             const contract = new ethers.Contract(votingHubAddress, abi.abi, signer);
             const tx = await contract.fundPollGas(pollId, { 
                 value: ethers.parseEther(amountInEth) 
@@ -26,6 +29,5 @@ export function useGasManagement(pollId, votingHubAddress, provider) {
             setIsFunding(false);
         }
     };
-
     return { currentBalance, topUp, isFunding, fetchBalance };
 }

@@ -7,7 +7,22 @@
     
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self'; 
-      connect-src 'self' https://gateway.pinata.cloud https://ipfs.io window.ethereum wss://*.walletconnect.com https://*.infura.io https://*.alchemy.com https://*.publicnode.com https://api.gelato.digital https://*.gelato.cloud wss://*.gelato.cloud wss://*.zkpassport.id https://*.zkpassport.id;
+      connect-src 'self' 
+        https://api.pinata.cloud 
+        https://gateway.pinata.cloud 
+        https://ipfs.io 
+        https://rpc.ankr.com 
+        https://*.ankr.com 
+        wss://*.walletconnect.com 
+        https://*.infura.io 
+        https://*.alchemy.com 
+        https://*.publicnode.com 
+        https://api.gelato.digital 
+        https://*.gelato.digital 
+        https://*.gelato.cloud 
+        wss://*.gelato.cloud 
+        wss://*.zkpassport.id 
+        https://*.zkpassport.id;
       worker-src 'self' blob:;
       script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' 'unsafe-inline';
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;

@@ -1,39 +1,47 @@
 const axios = require('axios');
-const FormData = require('form-data');
 require('dotenv').config();
+const { saveDeploymentInfo } = require('../../logger.js');
 
 const pinataApiKey = process.env.PINATA_API_KEY;
 const pinataSecretApiKey = process.env.PINATA_SECRET_API_KEY;
 
 const manifest = {
-  version: "1.0.0",
-  name: "Biometric ZKPassport Verification",
-  verificationMethod: "zkpassport",
-  artifacts: {},
-  config: {
-    minAge: 18,
-    nationality: ["CZE", "RUS"]
-  },
-  userInputs: {},
-  inputOrder: []
+    version: "2.0.0",
+    name: "Universal ZKPassport Verifier", // Универсальное имя
+    verificationMethod: "zkpassport",
+    artifacts: {},
+    config: {
+        domain: "localhost",
+        minAge: 18,           // 0 означает, что возраст не важен
+        inNationality: ["CZE", "RUS"]    // Пустой массив означает, что гражданство не важно
+    },
+    registrySchema: [],      // База данных не нужна
+    configABI: ["string", "uint8", "string[]"],
+    configKeys: ["domain", "minAge", "inNationality"],
+    userInputs: {},
+    inputOrder: []
+};
+
+async function main() {
+    console.log("> INITIATING_MANIFEST_UPLOAD: ZK_PASSPORT");
+    const url = `https://api.pinata.cloud/pinning/pinJSONToIPFS`;
+
+    try {
+        const res = await axios.post(url, manifest, {
+            headers: {
+                'Content-Type': 'application/json',
+                pinata_api_key: pinataApiKey,
+                pinata_secret_api_key: pinataSecretApiKey
+            }
+        });
+        
+        const manifestURI = `ipfs://${res.data.IpfsHash}`;
+        console.log(`> MANIFEST_URI: ${manifestURI}`);
+        saveDeploymentInfo('ZKPassport', 'manifestURI', manifestURI);
+        console.log("> STATUS: SUCCESS");
+    } catch (error) {
+        console.error("> ERROR:", error.response ? error.response.data : error.message);
+    }
 }
 
-async function uploadToPinata() {
-  const url = `https://api.pinata.cloud/pinning/pinJSONToIPFS`;
-
-  try {
-    const res = await axios.post(url, manifest, {
-      headers: {
-        'Content-Type': 'application/json',
-        pinata_api_key: pinataApiKey,
-        pinata_secret_api_key: pinataSecretApiKey
-      }
-    });
-    console.log("Manifest uploaded to IPFS!");
-    console.log(`[->] ipfs://${res.data.IpfsHash}`);
-  } catch (error) {
-    console.error("Error uploading to Pinata:", error);
-  }
-}
-
-uploadToPinata();
+main();

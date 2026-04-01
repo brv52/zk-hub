@@ -2,7 +2,12 @@
 pragma solidity ^0.8.21;
 
 interface IUniversalVerifier {
-    function verifyProof(uint256 pollId, uint256 optionId, bytes calldata proofData) external returns (bool isValid, bytes32 nullifier);
+    function verifyProof (
+        uint256 pollId, 
+        uint256 optionId, 
+        bytes calldata proofData,
+        bytes calldata verifierConfig
+    ) external returns (bool isValid, bytes32 nullifier);
 }
 
 interface IGroth16Verifier {
@@ -16,16 +21,20 @@ interface IGroth16Verifier {
 
 contract MembershipVerifier is IUniversalVerifier {
     IGroth16Verifier public groth16Verifier;
-    uint256 public expectedMerkleRoot;
-    uint256 public expectedMinAge;
 
-    constructor(address _groth16Verifier, uint256 _merkleRoot, uint256 _minAge) {
+    constructor(address _groth16Verifier) {
         groth16Verifier = IGroth16Verifier(_groth16Verifier);
-        expectedMerkleRoot = _merkleRoot;
-        expectedMinAge = _minAge;
     }
 
-    function verifyProof(uint256 pollId, uint256 optionId, bytes calldata proofData) external view override returns (bool isValid, bytes32 nullifier) {
+    function verifyProof(
+        uint256 pollId, 
+        uint256 optionId, 
+        bytes calldata proofData,
+        bytes calldata verifierConfig
+    ) external view override returns (bool isValid, bytes32 nullifier) {
+
+        (uint256 expectedMerkleRoot, uint256 expectedThreshold) = abi.decode(verifierConfig, (uint256, uint256));
+
         (
             uint[2] memory pA,
             uint[2][2] memory pB,
@@ -37,14 +46,14 @@ contract MembershipVerifier is IUniversalVerifier {
         
         uint256 clientNullifier = decodedSignals[0];
         uint256 proofMerkleRoot = decodedSignals[1];
-        
+
         require(proofMerkleRoot == expectedMerkleRoot, "MembershipVerifier: Invalid Merkle Root");
 
         uint[5] memory pubSignals = [
             clientNullifier,
             expectedMerkleRoot,
             pollId,
-            expectedMinAge,
+            expectedThreshold,
             optionId
         ];
 

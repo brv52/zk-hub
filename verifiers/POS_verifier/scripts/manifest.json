@@ -1,21 +1,51 @@
 {
-  "version": "1.0.0",
-  "name": "L2 State Storage Proof",
+  "version": "2.0.0",
+  "name": "L2 State Storage Verifier (Gated)",
   "verificationMethod": "storage-proof",
   "artifacts": {
-    "wasmURI": "ipfs://QmbvDC7hxXBnexvnbaLdqzyxXmJ1wHbTwdR3TSmrt5TxN6",
-    "zkeyURI": "ipfs://QmdpptvYCLMex6CzpjL1tT76MptAB9PpijgGUaWtk6PndD"
+    "wasmURI": "ipfs://QmWuVMYRL1dQw6EC5V1rTbtXJFcvEu9V8HgYFo4CbMZruq",
+    "zkeyURI": "ipfs://QmVbPM2dxF6nkuA3NmYt1VFwD4eJ2nZUW2LZ1nrjgG2emp"
   },
   "config": {
-    "storageURI": "ipfs://QmawbJnhpZj1dV5Nb9MrLGFMz9UkBnMyEBXu6LqkmGY5uy",
-    "depth": 10
+    "depth": 10,
+    "minThreshold": 100
   },
+  "registrySchema": [
+    {
+      "name": "slot",
+      "type": "string",
+      "label": "Storage Slot (User ID/Address)"
+    },
+    {
+      "name": "value",
+      "type": "number",
+      "label": "Storage Value (Token Balance)"
+    }
+  ],
+  "configABI": [
+    "uint256",
+    "uint256"
+  ],
+  "configKeys": [
+    "expectedStateRoot",
+    "minThreshold"
+  ],
   "userInputs": {
-    "slot": "number",
+    "slot": "string",
     "value": "number"
   },
   "inputOrder": [
     "slot",
     "value"
+  ],
+  "circuitSignals": [
+    "stateRoot",
+    "pollId",
+    "minThreshold",
+    "optionId",
+    "slot",
+    "value",
+    "pathElements",
+    "pathIndices"
   ]
 }

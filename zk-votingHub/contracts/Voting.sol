@@ -3,18 +3,21 @@ pragma solidity ^0.8.21;
 
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/utils/Context.sol";
 
 interface IUniversalVerifier {
-    function verifyProof(uint256 pollId, uint256 optionId, bytes calldata proofData) external returns (bool isValid, bytes32 nullifier);
+    function verifyProof (
+        uint256 pollId, 
+        uint256 optionId, 
+        bytes calldata proofData,
+        bytes calldata verifierConfig
+    ) external returns (bool isValid, bytes32 nullifier);
 }
 
 contract VotingHub is ReentrancyGuard, AccessControl {
     bytes32 public constant ORGANIZER_ROLE = keccak256("ORGANIZER_ROLE");
-    uint256 public constant GAS_CREDIT_PER_VOTE = 0.0005 ether;
     uint256 public constant VERIFIER_GAS_LIMIT = 2500000;
-
-    address private _trustedForwarder;
+    
+    uint256 private constant BASE_TX_OVERHEAD = 50000; 
 
     mapping(uint256 => uint256) public pollGasBalances;
 
@@ -24,8 +27,10 @@ contract VotingHub is ReentrancyGuard, AccessControl {
         bool isSponsored;
         uint64 endTime;
         address verifierContract;
+        bytes verifierConfig;
         string question;
         string metadataURI;
+        string databaseURI;
     }
 
     uint256 public nextPollId;
@@ -38,47 +43,19 @@ contract VotingHub is ReentrancyGuard, AccessControl {
     event VoteCast(uint256 indexed pollId, uint256 indexed optionId);
     event GasFunded(uint256 indexed pollId, uint256 amount);
     event FundsWithdrawn(address indexed admin, uint256 amount);
-    event ForwarderUpdated(address indexed newForwarder);
 
-    constructor(address forwarder) {
-        _trustedForwarder = forwarder;
+    constructor() {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(ORGANIZER_ROLE, msg.sender);
     }
 
-    function isTrustedForwarder(address forwarder) public view virtual returns (bool) {
-        return forwarder == _trustedForwarder;
-    }
-
-    function _msgSender() internal view virtual override returns (address sender) {
-        if (isTrustedForwarder(msg.sender) && msg.data.length >= 20) {
-            assembly {
-                sender := shr(96, calldataload(sub(calldatasize(), 20)))
-            }
-        } else {
-            return super._msgSender();
-        }
-    }
-
-    function _msgData() internal view virtual override returns (bytes calldata) {
-        if (isTrustedForwarder(msg.sender) && msg.data.length >= 20) {
-            return msg.data[:msg.data.length - 20];
-        } else {
-            return super._msgData();
-        }
-    }
-
-    function updateForwarder(address newForwarder) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(newForwarder != address(0), "Invalid forwarder");
-        _trustedForwarder = newForwarder;
-        emit ForwarderUpdated(newForwarder);
-    }
-
     function createPoll(
         address _verifier,
+        bytes calldata _verifierConfig,
         string calldata _question,
         string[] calldata _options,
         string calldata _metadataURI,
+        string calldata _databaseURI,
         uint64 _durationInSeconds,
         bool _isSponsored
     ) external onlyRole(ORGANIZER_ROLE) {
@@ -88,19 +65,19 @@ contract VotingHub is ReentrancyGuard, AccessControl {
 
         uint256 pollId = nextPollId++;
         uint64 endTime = uint64(block.timestamp) + _durationInSeconds;
-
         polls[pollId] = Poll({
-            creator: _msgSender(),
+            creator: msg.sender,
             exists: true,
             endTime: endTime,
             isSponsored: _isSponsored,
             verifierContract: _verifier,
+            verifierConfig: _verifierConfig,
             question: _question,
-            metadataURI: _metadataURI
+            metadataURI: _metadataURI,
+            databaseURI: _databaseURI
         });
-
         pollOptions[pollId] = _options;
-        emit PollCreated(pollId, _msgSender(), _verifier, _isSponsored);
+        emit PollCreated(pollId, msg.sender, _verifier, _isSponsored);
     }
 
     function fundPollGas(uint256 _pollId) external payable {
@@ -111,21 +88,18 @@ contract VotingHub is ReentrancyGuard, AccessControl {
     }
 
     function vote(uint256 _pollId, uint256 _optionId, bytes calldata _proofData) external nonReentrant {
+        uint256 startGas = gasleft();
+
         Poll storage p = polls[_pollId];
         require(p.exists, "Poll does not exist");
         require(block.timestamp < p.endTime, "Voting is closed"); 
         require(_optionId < pollOptions[_pollId].length, "Invalid option");
 
-        if (p.isSponsored) {
-            require(pollGasBalances[_pollId] >= GAS_CREDIT_PER_VOTE, "INSOLVENT: Reservoir empty");
-            pollGasBalances[_pollId] -= GAS_CREDIT_PER_VOTE;
-        }
-
         IUniversalVerifier verifier = IUniversalVerifier(p.verifierContract);
         bool isValid;
         bytes32 nullifier;
         
-        try verifier.verifyProof{gas: VERIFIER_GAS_LIMIT}(_pollId, _optionId, _proofData) 
+        try verifier.verifyProof{gas: VERIFIER_GAS_LIMIT}(_pollId, _optionId, _proofData, p.verifierConfig) 
             returns (bool _isValid, bytes32 _nullifier) 
         {
             isValid = _isValid;
@@ -139,6 +113,14 @@ contract VotingHub is ReentrancyGuard, AccessControl {
 
         hasVoted[_pollId][nullifier] = true;
         votes[_pollId][_optionId] += 1;
+
+        if (p.isSponsored && (msg.sender != tx.origin)) {
+            uint256 gasUsed = startGas - gasleft() + BASE_TX_OVERHEAD;
+            uint256 estimatedCost = gasUsed * tx.gasprice;
+
+            require(pollGasBalances[_pollId] >= estimatedCost, "INSOLVENT: Sponsor reservoir empty");
+            pollGasBalances[_pollId] -= estimatedCost;
+        }
 
         emit VoteCast(_pollId, _optionId);
     }

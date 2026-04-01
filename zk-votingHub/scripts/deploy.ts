@@ -1,54 +1,52 @@
 import { ethers, network, run, artifacts } from "hardhat";
 import * as fs from "fs";
 import * as path from "path";
-
-const GELATO_FORWARDERS: { [key: string]: string } = {
-    "sepolia": "0xd8253782c45a12053594b9deB72d8e8aB2Fca54c",
-    "arbitrumSepolia": "0xd8253782c45a12053594b9deB72d8e8aB2Fca54c",
-    "localhost": "0x0000000000000000000000000000000000000000",
-};
+const { saveDeploymentInfo } = require("./logger.js");
 
 async function main() {
-    console.log(`\nStarting Deployment to network: ${network.name}`);
+    console.log(`> INITIATING_DEPLOYMENT: VOTING_HUB_CORE (ERC-4337 NATIVE)`);
+    console.log(`> NETWORK: ${network.name}`);
+
     const [deployer] = await ethers.getSigners();
-    const forwarder = GELATO_FORWARDERS[network.name] || GELATO_FORWARDERS["localhost"];
 
-    if (forwarder === "0x0000000000000000000000000000000000000000" && network.name !== "hardhat") {
-        console.warn("Warning: Using a null address for the Trusted Forwarder.");
-    }
-
-    console.log(`Deploying contracts with the account: ${deployer.address}`);
-    console.log(`Using Trusted Forwarder: ${forwarder}`);
     const balance = await ethers.provider.getBalance(deployer.address);
-    console.log(`Account balance: ${ethers.formatEther(balance)} ETH`);
+    console.log(`> OPERATOR: ${deployer.address}`);
+    console.log(`> BALANCE: ${ethers.formatEther(balance)} ETH`);
     
-    console.log("\nDeploying VotingHub...");
+    console.log("> EXECUTING_DEPLOYMENT_ROUTINE...");
     const VotingHub = await ethers.getContractFactory("VotingHub");
-    const votingHub = await VotingHub.deploy(forwarder);
+    
+    const votingHub = await VotingHub.deploy();
     await votingHub.waitForDeployment();
 
     const votingHubAddress = await votingHub.getAddress();
-    console.log(`VotingHub deployed to: ${votingHubAddress}`);
+    console.log(`> VOTING_HUB_DEPLOYED: ${votingHubAddress}`);
+
+    saveDeploymentInfo('Core', 'votingHubAddress', votingHubAddress);
+
     saveFrontendFiles(votingHubAddress);
-    if (network.name !== "hardhat" && network.name !== "localhost") {
-        console.log("\nWaiting for 5 block confirmations before verification...");
-        await votingHub.deploymentTransaction()?.wait(5);
-        console.log("Verifying contract on explorer...");
-        try {
-            await run("verify:verify", {
-                address: votingHubAddress,
-                constructorArguments: [forwarder],
-            });
-            console.log("Contract verified successfully!");
-        } catch (error: any) {
-            if (error.message.toLowerCase().includes("already verified")) {
-                console.log("Contract is already verified.");
-            } else {
-                console.error("Verification failed:", error.message);
-            }
-        }
-    }
-    console.log("\nDeployment sequence completed successfully!");
+
+    // if (network.name !== "hardhat" && network.name !== "localhost") {
+    //     console.log("> AWAITING_BLOCK_CONFIRMATIONS...");
+    //     await votingHub.deploymentTransaction()?.wait(5);
+        
+    //     console.log("> VERIFYING_ON_EXPLORER...");
+    //     try {
+    //         await run("verify:verify", {
+    //             address: votingHubAddress,
+    //             constructorArguments: [], // Массив аргументов теперь пустой
+    //         });
+    //         console.log("> VERIFICATION_SUCCESS");
+    //     } catch (error: any) {
+    //         if (error.message.toLowerCase().includes("already verified")) {
+    //             console.log("> STATUS: ALREADY_VERIFIED");
+    //         } else {
+    //             console.error("> VERIFICATION_ERROR:", error.message);
+    //         }
+    //     }
+    // }
+    
+    console.log("> DEPLOYMENT_SEQUENCE_COMPLETED");
 }
 
 function saveFrontendFiles(votingHubAddress: string) {
@@ -65,11 +63,11 @@ function saveFrontendFiles(votingHubAddress: string) {
         path.join(frontendDir, "VotingHub.json"),
         JSON.stringify(VotingHubArtifact, null, 2)
     );
-    console.log(`\nFrontend artifacts exported to: ${frontendDir}`);
+    console.log(`> FRONTEND_ARTIFACTS_EXPORTED: ${frontendDir}`);
 }
 
 main().catch((error) => {
-    console.error("\nDeployment failed:");
+    console.error("\n> DEPLOYMENT_FAILED:");
     console.error(error);
     process.exitCode = 1;
 });

@@ -4,30 +4,36 @@ include "circomlib/circuits/poseidon.circom";
 include "circomlib/circuits/comparators.circom";
 include "circomlib/circuits/mux1.circom";
 
+template BindPublicInput() {
+    signal input in;
+    signal output bound;
+    bound <== in * in;
+}
+
 template Membership(depth) {
     signal input merkleRoot;
     signal input pollId;
-    signal input expectedMinAge;
+    signal input minThreshold;
     signal input optionId;
 
     signal input secret;
-    signal input age;
+    signal input value;
     signal input pathElements[depth];
     signal input pathIndices[depth];
 
     signal output nullifier;
 
-    component ageBits = Num2Bits(8);
-    ageBits.in <== age;
+    component valueBits = Num2Bits(64);
+    valueBits.in <== value;
 
-    component ageCheck = GreaterEqThan(8);
-    ageCheck.in[0] <== age;
-    ageCheck.in[1] <== expectedMinAge;
-    ageCheck.out === 1;
+    component thresholdCheck = GreaterEqThan(64);
+    thresholdCheck.in[0] <== value;
+    thresholdCheck.in[1] <== minThreshold;
+    thresholdCheck.out === 1;
 
     component leafHash = Poseidon(2);
     leafHash.inputs[0] <== secret;
-    leafHash.inputs[1] <== age;
+    leafHash.inputs[1] <== value;
     signal leaf <== leafHash.out;
 
     signal currentHash[depth + 1];
@@ -63,7 +69,8 @@ template Membership(depth) {
     nullifierHash.inputs[1] <== pollId;
     nullifier <== nullifierHash.out;
 
-    signal optionIdSquared <== optionId * optionId;
+    component voteBinder = BindPublicInput();
+    voteBinder.in <== optionId;
 }
 
-component main {public [merkleRoot, pollId, expectedMinAge, optionId]} = Membership(10);
+component main {public [merkleRoot, pollId, minThreshold, optionId]} = Membership(10);

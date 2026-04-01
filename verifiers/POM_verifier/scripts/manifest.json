@@ -1,24 +1,54 @@
 {
-  "version": "1.0.0",
-  "name": "Thesis Membership Verifier",
+  "version": "2.0.0",
+  "name": "Universal Membership & Threshold Verifier",
   "verificationMethod": "merkle-tree",
   "artifacts": {
-    "wasmURI": "ipfs://QmejFt2976r7ocqemusVmcBakEF8P29QjbUTBv6u5mBTkr",
-    "zkeyURI": "ipfs://QmZr25puLDE1m26XvUreen1JwsbjyVWb6DtLypCY62ETug"
+    "wasmURI": "ipfs://QmUYpoptXHDC6DhCewavWcbtqJJkPkosLWMfg1dJhZ8iWk",
+    "zkeyURI": "ipfs://QmTmD1gsKjPJYXo6JGyg8XYWYyatPcGiRZbh3b4tD99sKv"
   },
   "config": {
-    "treeSourceURI": "https://gateway.pinata.cloud/ipfs/QmVwSxfJMvAWMieeqMwUemTYMx9uip6ss7UuPSeM8ju5D7",
-    "expectedMinAge": 18,
     "depth": 10,
     "arity": 2,
-    "hashAlgorithm": "poseidon"
+    "hashAlgorithm": "poseidon",
+    "emptyNodeValue": "0",
+    "minThreshold": 0
   },
+  "registrySchema": [
+    {
+      "name": "secret",
+      "type": "string",
+      "label": "Voter Secret (Entropy)"
+    },
+    {
+      "name": "value",
+      "type": "number",
+      "label": "Threshold Value (Age/Balance/etc)"
+    }
+  ],
+  "configABI": [
+    "uint256",
+    "uint256"
+  ],
+  "configKeys": [
+    "merkleRoot",
+    "minThreshold"
+  ],
   "userInputs": {
     "secret": "string",
-    "age": "number"
+    "value": "number"
   },
   "inputOrder": [
     "secret",
-    "age"
+    "value"
+  ],
+  "circuitSignals": [
+    "merkleRoot",
+    "pollId",
+    "minThreshold",
+    "optionId",
+    "secret",
+    "value",
+    "pathElements",
+    "pathIndices"
   ]
 }

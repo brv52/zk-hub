@@ -2,7 +2,12 @@
 pragma solidity ^0.8.21;
 
 interface IUniversalVerifier {
-    function verifyProof(uint256 pollId, uint256 optionId, bytes calldata proofData) external returns (bool isValid, bytes32 nullifier);
+    function verifyProof (
+        uint256 pollId, 
+        uint256 optionId, 
+        bytes calldata proofData,
+        bytes calldata verifierConfig
+    ) external returns (bool isValid, bytes32 nullifier);
 }
 
 struct ProofVerificationParams {
@@ -44,42 +49,58 @@ interface IZKPassportVerifier {
 
 contract ZKPassportPollWrapper is IUniversalVerifier {
     IZKPassportVerifier public constant zkPassportVerifier = IZKPassportVerifier(0x1D000001000EFD9a6371f4d90bB8920D5431c0D8);
-    string public expectedDomain;
-    uint8 public expectedMinAge;
-    string[] public expectedNationalities;
 
-    constructor(string memory _domain, uint8 _minAge, string[] memory _nationalities) {
-        expectedDomain = _domain;
-        expectedMinAge = _minAge;
-        expectedNationalities = _nationalities;
-    }
+    constructor() { }
 
-    function verifyProof(uint256 pollId, uint256 optionId, bytes calldata proofData) external override returns (bool, bytes32) {
+    function verifyProof(
+        uint256 pollId, 
+        uint256 optionId, 
+        bytes calldata proofData,
+        bytes calldata verifierConfig
+    ) external override returns (bool isValid, bytes32 nullifier) {
+        // 1. Декодируем универсальный конфиг опроса
+        (
+            string memory expectedDomain, 
+            uint8 expectedMinAge, 
+            string[] memory expectedNationalities
+        ) = abi.decode(verifierConfig, (string, uint8, string[]));
+
         ProofVerificationParams memory params = abi.decode(proofData, (ProofVerificationParams));
-        (bool isValid, bytes32 uniqueIdentifier, IZKPassportHelper helper) = zkPassportVerifier.verify(params);
-        
-        require(isValid, "ZKPassport: Cryptographic proof is invalid");
-        
+
+        // 2. Базовая проверка криптографии паспорта (Подпись государства)
+        (bool verified, bytes32 uniqueIdentifier, IZKPassportHelper helper) = zkPassportVerifier.verify(params);
+        require(verified, "ZKPassport: Core verification failed");
+
+        // 3. Проверка домена и скоупа (защита от replay-атак между приложениями)
         require(
             helper.verifyScopes(params.proofVerificationData.publicInputs, expectedDomain, "voting-scope"),
             "ZKPassport: Invalid app domain or scope"
         );
 
+        // 4. Привязка пруфа к конкретному голосованию и опции
         BoundData memory boundData = helper.getBoundData(params.committedInputs);
         string memory expectedCustomData = string(abi.encodePacked(uint2str(pollId), "_", uint2str(optionId)));
         require(
             keccak256(abi.encodePacked(boundData.customData)) == keccak256(abi.encodePacked(expectedCustomData)),
             "ZKPassport: Proof not bound to this Poll ID and Option ID"
         );
-        require(
-            helper.isAgeAboveOrEqual(expectedMinAge, params.committedInputs),
-            "ZKPassport: Voter does not meet age requirement"
-        );
-        require(
-            helper.isNationalityIn(expectedNationalities, params.committedInputs),
-            "ZKPassport: Voter nationality is not eligible for this poll"
-        );
-        
+
+        // 5. ЭВРИСТИКА: Опциональная проверка возраста
+        if (expectedMinAge > 0) {
+            require(
+                helper.isAgeAboveOrEqual(expectedMinAge, params.committedInputs),
+                "ZKPassport: Voter does not meet age requirement"
+            );
+        }
+
+        // 6. ЭВРИСТИКА: Опциональная проверка гражданства
+        if (expectedNationalities.length > 0) {
+            require(
+                helper.isNationalityIn(expectedNationalities, params.committedInputs),
+                "ZKPassport: Voter nationality is not eligible for this poll"
+            );
+        }
+
         return (true, uniqueIdentifier);
     }
 

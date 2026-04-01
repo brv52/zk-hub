@@ -16,7 +16,6 @@ const formatConfigValue = (key, value) => {
   return value;
 };
 
-
 // --- SUB-COMPONENT: ZK Passport Constraints Viewer ---
 const ZKPassportConfigViewer = ({ config }) => {
   const entries = Object.entries(config || {}).filter(
@@ -26,13 +25,19 @@ const ZKPassportConfigViewer = ({ config }) => {
   if (entries.length === 0) return null;
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       {entries.map(([key, value]) => (
-        <div key={key} className="border border-[#f0f0f0]/20 bg-[#0a0a0a]/50 p-4">
-          <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.2em] text-[#f0f0f0]/50">
-            {formatLabel(key)}
+        <div 
+          key={key} 
+          className="group relative overflow-hidden border border-[#f0f0f0]/10 bg-black/40 p-4 transition-colors duration-300 hover:border-[#ccff00]/40 hover:bg-[#ccff00]/5"
+        >
+          {/* Декоративный уголок */}
+          <div className="absolute right-0 top-0 h-2 w-2 border-r border-t border-[#ccff00]/50 opacity-0 transition-opacity group-hover:opacity-100" />
+          
+          <span className="mb-2 block font-mono text-[9px] uppercase tracking-[0.3em] text-[#f0f0f0]/40 group-hover:text-[#f0f0f0]/70 transition-colors">
+            &gt; {formatLabel(key)}
           </span>
-          <span className="font-mono text-xs font-bold text-[#ccff00]">
+          <span className="font-mono text-sm font-bold text-[#ccff00] drop-shadow-[0_0_8px_rgba(204,255,0,0.2)]">
             {formatConfigValue(key, value)}
           </span>
         </div>
@@ -41,7 +46,6 @@ const ZKPassportConfigViewer = ({ config }) => {
   );
 };
 
-
 // --- SUB-COMPONENT: Crypto Input Matrix Viewer ---
 const CryptoInputMatrixViewer = ({ userInputs }) => {
   const keys = Object.keys(userInputs || {});
@@ -49,26 +53,30 @@ const CryptoInputMatrixViewer = ({ userInputs }) => {
   if (keys.length === 0) return null;
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       {keys.map((key) => (
-        <div key={key} className="flex flex-col border border-[#f0f0f0]/20 bg-[#0a0a0a]/50 p-4">
-          <div className="mb-2 flex items-start justify-between">
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#f0f0f0]/50">
-              {formatLabel(key)}
+        <div 
+          key={key} 
+          className="group relative flex flex-col border border-[#f0f0f0]/10 bg-black/40 p-4 transition-colors duration-300 hover:border-[#ccff00]/40 hover:bg-[#ccff00]/5"
+        >
+          <div className="absolute left-0 top-0 h-full w-[2px] bg-[#ccff00] opacity-0 transition-opacity group-hover:opacity-100" />
+          
+          <div className="mb-3 flex items-start justify-between">
+            <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-[#f0f0f0]/40 group-hover:text-[#f0f0f0]/70 transition-colors">
+              &gt; {formatLabel(key)}
             </span>
-            <span className="bg-[#ccff00] px-1 text-[8px] font-bold tracking-widest text-[#0a0a0a]">
+            <span className="border border-[#ccff00]/30 bg-[#ccff00]/10 px-1.5 py-0.5 font-mono text-[8px] font-bold tracking-widest text-[#ccff00]">
               PRIVATE
             </span>
           </div>
-          <span className="font-mono text-xs uppercase text-[#f0f0f0]">
-            TYPE: {userInputs[key]}
+          <span className="font-mono text-xs uppercase tracking-widest text-[#f0f0f0]">
+            TYPE: <span className="text-[#f0f0f0]/60">{userInputs[key]}</span>
           </span>
         </div>
       ))}
     </div>
   );
 };
-
 
 // --- MAIN COMPONENT ---
 export default function PollManifestViewer({ manifest }) {
@@ -77,29 +85,42 @@ export default function PollManifestViewer({ manifest }) {
   const isZKPassport = manifest.verificationMethod === "zkpassport";
 
   return (
-    <div className="glass-panel relative mb-8 border-[#f0f0f0]/30 p-6">
+    <div className="glass-panel relative mb-8 overflow-hidden border border-[#f0f0f0]/10 bg-[#0a0a0a]/80 p-6 md:p-8 shadow-[0_0_40px_rgba(0,0,0,0.5)] backdrop-blur-xl">
       
-      {/* Security Level Badge */}
-      <div className="absolute right-0 top-0 border-b border-l border-[#f0f0f0]/20 bg-[#0a0a0a]/80 p-2">
-        <span className="font-mono text-[8px] font-bold uppercase tracking-[0.3em] text-[#ccff00]">
-          {isZKPassport ? "SEC_LEVEL: BIO" : "SEC_LEVEL: CRYPTO"}
-        </span>
-      </div>
+      {/* Декоративное фоновое свечение */}
+      <div className="absolute left-[-50px] top-[-50px] h-[150px] w-[150px] rounded-full bg-[#ccff00]/5 blur-[80px] pointer-events-none" />
 
-      {/* Header Info */}
-      <div className="mb-6 border-b border-[#f0f0f0]/20 pb-4">
-        <h3 className="mb-1 font-display text-2xl font-black uppercase tracking-widest text-[#f0f0f0]">
-          {manifest.name || "UNNAMED_INSTANCE"}
-        </h3>
-        <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#f0f0f0]/50">
-          VERIFICATION_MODULE: {manifest.verificationMethod}
-        </p>
+      {/* Header Info - Теперь на флексах, как в VotePage */}
+      <div className="mb-8 flex flex-col items-start justify-between gap-3 border-b border-[#f0f0f0]/10 pb-5 md:flex-row md:items-end relative z-10">
+        <div>
+          <h3 className="mb-3 break-words font-display text-xl font-black uppercase leading-[1.1] tracking-widest text-[#f0f0f0] drop-shadow-[0_0_10px_rgba(255,255,255,0.1)] md:text-2xl">
+            {manifest.name || "UNNAMED_INSTANCE"}
+          </h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-[#f0f0f0]/40">
+              VERIFICATION_MODULE:
+            </span>
+            <span className="border border-[#f0f0f0]/20 bg-black/40 px-2 py-0.5 font-mono text-[9px] uppercase tracking-widest text-[#f0f0f0]/70">
+              {manifest.verificationMethod}
+            </span>
+          </div>
+        </div>
+
+        {/* Security Level Badge - Интегрирован в поток документа */}
+        <div className="flex items-center self-start space-x-2 border px-2 py-1 font-mono text-[9px] uppercase tracking-widest bg-black/40 backdrop-blur-sm border-[#ccff00]/30 text-[#ccff00]">
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#ccff00] opacity-50"></span>
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#ccff00]"></span>
+          </span>
+          <span>{isZKPassport ? "SEC_LEVEL: BIO" : "SEC_LEVEL: CRYPTO"}</span>
+        </div>
       </div>
 
       {/* Dynamic Matrix View */}
-      <div>
-        <h4 className="mb-4 border-l-2 border-[#ccff00] pl-3 font-mono text-xs font-bold uppercase tracking-widest text-[#f0f0f0]">
-          {isZKPassport ? "// IDENTITY_CONSTRAINTS" : "// CRYPTO_INPUT_MATRIX"}
+      <div className="relative z-0">
+        <h4 className="mb-5 flex items-center gap-3 font-mono text-xs font-bold uppercase tracking-widest text-[#f0f0f0]">
+          <span className="text-[#ccff00] opacity-50">//</span> 
+          {isZKPassport ? "IDENTITY_CONSTRAINTS" : "CRYPTO_INPUT_MATRIX"}
         </h4>
         
         {isZKPassport ? (

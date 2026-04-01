@@ -4,21 +4,28 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest"
   },
   "dependencies": {
+    "@alchemy/aa-alchemy": "^3.19.0",
+    "@alchemy/aa-core": "^3.19.0",
     "@gelatocloud/gasless": "^0.0.12",
+    "@gelatonetwork/relay-context": "^4.1.1",
     "@tailwindcss/vite": "^4.2.1",
     "@zkpassport/sdk": "^0.12.5",
+    "axios": "^1.14.0",
+    "circomlibjs": "^0.1.7",
     "ethers": "^6.11.1",
     "event-source-polyfill": "^1.0.31",
+    "papaparse": "^5.5.3",
     "qrcode.react": "^3.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-qr-code": "^2.0.18"
+    "react-qr-code": "^2.0.18",
+    "viem": "^2.47.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.1",

@@ -21,6 +21,9 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+    allowedHosts: true,
+    headers: {
+      "ngrok-skip-browser-warning": "true"
+    }
   }
 });

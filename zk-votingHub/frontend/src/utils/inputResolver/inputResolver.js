@@ -9,14 +9,16 @@ const strategies = {
     "storage-proof": new ProofOfStorageStrategy()
 };
 
-export async function resolveSystemInputs(manifest, userInputs, verifierAddress, provider) {
-    if (!manifest || !manifest.verificationMethod) {
-        throw new Error("Invalid manifest: Missing verificationMethod property");
-    }
-    const strategy = strategies[manifest.verificationMethod];
-    if (!strategy) {
-        throw new Error(`Unsupported verification method: ${manifest.verificationMethod}`);
-    }
+function getStrategy(method) {
+    const strategy = strategies[method];
+    if (!strategy) throw new Error(`Unsupported verification method: ${method}`);
+    return strategy;
+}
 
-    return await strategy.resolve(manifest, userInputs, verifierAddress, provider);
+export async function resolveSystemInputs(manifest, userInputs, verifierAddress, provider, databaseURI) {
+    return await getStrategy(manifest.verificationMethod).resolve(manifest, userInputs, verifierAddress, provider, databaseURI);
+}
+
+export async function buildDatabaseFromStrategy(manifest, rawDataset) {
+    return await getStrategy(manifest.verificationMethod).buildDatabase(manifest, rawDataset);
 }

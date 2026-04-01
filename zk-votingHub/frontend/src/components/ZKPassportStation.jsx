@@ -19,30 +19,38 @@ function useZKPassportAuth({ pollId, selectedOption, requirements, executeBlockc
                 setStatus("> CONNECTING_TO_BRIDGE...");
                 const zkPassport = new ZKPassport("localhost");
 
-                const queryBuilder = await zkPassport.request({
+                let builder = await zkPassport.request({
                     name: "ZK_VOTING_HUB",
                     purpose: `SYS.VOTE_POLL_${pollId}`,
-                    mode: "compressed-evm", 
+                    mode: "compressed-evm",
                     devMode: true,
                     scope: "voting-scope",
                 });
 
-                queryBuilder.bind("custom_data", `${pollId}_${selectedOption}`);
-                let builder = queryBuilder;
+                builder.bind("custom_data", `${pollId}_${selectedOption}`);
 
-                for (const [key, value] of Object.entries(requirements || {})) {
-                    if (key === 'pollId') continue;
+                if (requirements) {
+                    for (const [key, value] of Object.entries(requirements)) {
+                        // Пропускаем технические поля, если они случайно попали
+                        if (key === 'pollId' || key === 'domain') continue;
 
-                    if (Array.isArray(value)) {
-                        builder = builder.in(key, value);
-                    } else if (key.toLowerCase().startsWith('min')) {
-                        const attr = key.replace('min', '').toLowerCase();
-                        builder = builder.gte(attr, Number(value));
-                    } else if (key.toLowerCase().startsWith('max')) {
-                        const attr = key.replace('max', '').toLowerCase();
-                        builder = builder.lte(attr, Number(value));
-                    } else {
-                        builder = builder.eq(key, value);
+                        // Парсим префикс (первые 2-3 буквы) и сам атрибут (с маленькой буквы)
+                        if (key.startsWith('min')) {
+                            const attr = key.replace('min', '').toLowerCase(); // minAge -> age
+                            builder = builder.gte(attr, Number(value));
+                        }
+                        else if (key.startsWith('max')) {
+                            const attr = key.replace('max', '').toLowerCase(); // maxAge -> age
+                            builder = builder.lte(attr, Number(value));
+                        }
+                        else if (key.startsWith('in')) {
+                            const attr = key.replace('in', '').toLowerCase(); // inNationality -> nationality
+                            builder = builder.in(attr, Array.isArray(value) ? value : [value]);
+                        }
+                        else if (key.startsWith('eq')) {
+                            const attr = key.replace('eq', '').toLowerCase(); // eqGender -> gender
+                            builder = builder.eq(attr, value);
+                        }
                     }
                 }
 
@@ -78,13 +86,13 @@ function useZKPassportAuth({ pollId, selectedOption, requirements, executeBlockc
     const sendVoteToBlockchain = async (zk, proof) => {
         try {
             setStatus("> PROOF_RECEIVED. PREPARING_TRANSACTION...");
-            
+
             const rawParams = zk.getSolidityVerifierParameters({
                 proof: proof,
                 devMode: true,
-                scope: "voting-scope", 
+                scope: "voting-scope",
             });
-            
+
             const proofVerificationDataTuple = "tuple(bytes32 vkeyHash, bytes proof, bytes32[] publicInputs)";
             const serviceConfigTuple = "tuple(uint256 validityPeriodInSeconds, string domain, string scope, bool devMode)";
             const paramsTuple = `tuple(bytes32 version, ${proofVerificationDataTuple} proofVerificationData, bytes committedInputs, ${serviceConfigTuple} serviceConfig)`;
@@ -109,13 +117,13 @@ function useZKPassportAuth({ pollId, selectedOption, requirements, executeBlockc
             const encodedProofData = abiCoder.encode([paramsTuple], [formattedParams]);
 
             await executeBlockchainTx(encodedProofData);
-            
+
             setStatus("> SUCCESS: ANONYMOUS_PAYLOAD_RECORDED.");
 
             if (onVoteSuccess) {
                 setTimeout(() => {
                     onVoteSuccess();
-                }, 1500); 
+                }, 1500);
             }
         } catch (err) {
             setIsError(true);
@@ -140,7 +148,7 @@ const QRCodeDisplay = ({ qrUrl }) => (
         </div>
 
         {qrUrl && (
-            <a 
+            <a
                 href={qrUrl}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -156,7 +164,7 @@ const QRCodeDisplay = ({ qrUrl }) => (
 const SystemStatusLog = ({ status, isError }) => {
     const baseClasses = "p-4 font-mono text-xs uppercase tracking-widest border transition-none";
     let statusClasses = "bg-transparent text-[#f0f0f0] border-[#f0f0f0]/30 animate-pulse";
-    
+
     if (isError) {
         statusClasses = "bg-red-500/10 text-red-500 border-red-500";
     } else if (status.includes("SUCCESS")) {
@@ -168,10 +176,10 @@ const SystemStatusLog = ({ status, isError }) => {
             <div className={`${baseClasses} ${statusClasses}`}>
                 {status}
             </div>
-            
+
             {isError && (
-                <button 
-                    onClick={() => window.location.reload()} 
+                <button
+                    onClick={() => window.location.reload()}
                     className="mt-6 border-b border-red-500 pb-1 font-mono text-[10px] uppercase tracking-[0.3em] text-red-500 transition-none hover:border-[#f0f0f0] hover:text-[#f0f0f0]"
                 >
                     [ RESTART_SEQUENCE ]

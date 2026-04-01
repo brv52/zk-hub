@@ -1,54 +1,111 @@
 import { BaseStrategy } from "./BaseStrategy";
 import { buildPoseidon } from "circomlibjs";
+import { ethers } from "ethers";
 
 export class ProofOfStorageStrategy extends BaseStrategy {
-    async resolve(manifest, userInputs, verifierAddress, provider) {
-        const config = manifest.config || {};
-        const resolvedInputs = { ...userInputs, ...config };
+    
+    async buildDatabase(manifest, rawDataset) {
+        const depth = manifest.config.depth || 10;
+        const poseidon = await buildPoseidon();
+        const F = poseidon.F;
+        const hashFn = (a, b) => F.toObject(poseidon([a, b]));
 
-        const storageState = await this.fetchDataset(config.storageURI);
+        if (!manifest.registrySchema || manifest.registrySchema.length < 2) {
+            throw new Error("Storage Proof requires at least 2 fields in registrySchema (Key and Value)");
+        }
+        const keyField = manifest.registrySchema[0].name;
+        const valueField = manifest.registrySchema[1].name;
+
+        let currentLevel = rawDataset.map(r => hashFn(BigInt(r[keyField]), BigInt(r[valueField])));
+        let emptyNode = BigInt(0);
+
+        for (let i = 0; i < depth; i++) {
+            const nextLevel = [];
+            for (let j = 0; j < currentLevel.length; j += 2) {
+                const left = currentLevel[j];
+                const right = j + 1 < currentLevel.length ? currentLevel[j + 1] : emptyNode;
+                nextLevel.push(hashFn(left, right));
+            }
+            currentLevel = nextLevel;
+            emptyNode = hashFn(emptyNode, emptyNode);
+        }
+
+        const calculatedRoot = currentLevel[0].toString();
+
+        const configValues = manifest.configKeys.map(key => {
+            if (key.toLowerCase().includes('root')) return calculatedRoot;
+            if (manifest.config[key] !== undefined) return manifest.config[key];
+            throw new Error(`CONFIG_ERROR: Missing key [${key}] in manifest config.`);
+        });
         
-        const targetSlot = userInputs.slot;
-        const targetValue = userInputs.value;
-        const targetSlotStr = targetSlot.toString();
-        const targetValueStr = targetValue.toString();
+        const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+        const encodedConfig = abiCoder.encode(manifest.configABI, configValues);
+
+        return { safeDataset: rawDataset, encodedConfig };
+    }
+
+    async resolve(manifest, userInputs, verifierAddress, provider, databaseURI) {
+        const config = manifest.config || {};
+        const storageState = await this.fetchDataset(databaseURI);
+        
+        const keyField = manifest.registrySchema[0].name;
+        const valueField = manifest.registrySchema[1].name;
+
+        const targetKeyStr = userInputs[keyField].toString();
+        const targetValueStr = userInputs[valueField].toString();
 
         const recordIndex = storageState.findIndex(r => 
-            r.slot.toString() === targetSlotStr && 
-            r.value.toString() === targetValueStr
+            r[keyField].toString() === targetKeyStr && 
+            r[valueField].toString() === targetValueStr
         );
         
-        if (recordIndex === -1) throw new Error("Storage Proof: Slot and Value not found in State Root DB.");
+        if (recordIndex === -1) throw new Error(`Storage Proof: [${keyField}] and [${valueField}] not found in DB.`);
 
-        const treeData = await this.buildSMT(storageState, recordIndex, config.depth || 10);
+        // Эвристическая валидация всех порогов (min/max)
+        for (const [confKey, confValue] of Object.entries(config)) {
+            const lowerConfKey = confKey.toLowerCase();
+            if (lowerConfKey.startsWith('min') && Number(targetValueStr) < Number(confValue)) {
+                throw new Error(`INELIGIBLE: ${valueField} is below required ${confKey}`);
+            }
+            if (lowerConfKey.startsWith('max') && Number(targetValueStr) > Number(confValue)) {
+                throw new Error(`INELIGIBLE: ${valueField} exceeds allowed ${confKey}`);
+            }
+        }
 
+        const treeData = await this.buildSMT(storageState, recordIndex, config.depth || 10, keyField, valueField);
+
+        // Формируем супер-объект со всеми возможными ключами
         const allAvailableData = {
             ...userInputs,
             ...config,
             pathElements: treeData.pathElements,
             pathIndices: treeData.pathIndices,
-            stateRoot: treeData.calculatedRoot
+            // Прокидываем корень под всеми популярными именами (фильтр ниже оставит только нужное)
+            stateRoot: treeData.calculatedRoot,
+            merkleRoot: treeData.calculatedRoot,
+            expectedStateRoot: treeData.calculatedRoot,
+            root: treeData.calculatedRoot
+        };
+
+        // ЭВРИСТИКА: Если манифест имеет circuitSignals, используем его строго.
+        // Иначе пытаемся угадать (fallback).
+        let expectedSignals = manifest.circuitSignals;
+        if (!expectedSignals) {
+            console.warn("WARNING: manifest.circuitSignals is missing. Using heuristic fallback.");
+            const rootName = manifest.configKeys?.find(k => k.toLowerCase().includes('root'))?.replace(/^expected/i, '') || 'stateRoot';
+            const circomRootKey = rootName.charAt(0).toLowerCase() + rootName.slice(1);
+            expectedSignals = [circomRootKey, "pollId", "optionId", "pathElements", "pathIndices", ...Object.keys(userInputs), ...Object.keys(config)];
         }
 
-        const expectedCircuitSignals = [
-            "stateRoot", 
-            "pollId", 
-            "optionId", 
-            "slot", 
-            "value", 
-            "pathElements", 
-            "pathIndices"
-        ];
-
-        return this.sanitizeCircuitInputs(allAvailableData, expectedCircuitSignals);
+        return this.sanitizeCircuitInputs(allAvailableData, expectedSignals);
     }
 
-    async buildSMT(storageState, targetIndex, depth) {
+    async buildSMT(storageState, targetIndex, depth, keyField, valueField) {
         const poseidon = await buildPoseidon();
         const F = poseidon.F;
         const hashFn = (a, b) => F.toObject(poseidon([a, b]));
 
-        let currentLevel = storageState.map(r => hashFn(BigInt(r.slot), BigInt(r.value)));
+        let currentLevel = storageState.map(r => hashFn(BigInt(r[keyField]), BigInt(r[valueField])));
         let currentIndex = targetIndex;
         
         const pathElements = [];

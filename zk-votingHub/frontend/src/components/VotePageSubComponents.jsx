@@ -8,7 +8,7 @@ export const VoteTelemetry = ({ userVotedFor, pollResults, totalVotes }) => (
         &gt; PAYLOAD_DELIVERED. LOCAL_HASH: {userVotedFor}
       </div>
     )}
-    
+
     <div className="space-y-6">
       {pollResults.map((result, idx) => {
         const percentage = totalVotes === 0 ? 0 : Math.round((result.count / totalVotes) * 100);
@@ -16,20 +16,20 @@ export const VoteTelemetry = ({ userVotedFor, pollResults, totalVotes }) => (
           <div key={idx} className="group relative">
             <div className="mb-2 flex items-end justify-between font-mono text-xs uppercase tracking-widest">
               <span className="flex items-center gap-2 font-bold text-[#f0f0f0]">
-                <span className="opacity-50 text-[#ccff00]">&gt;</span> 
+                <span className="opacity-50 text-[#ccff00]">&gt;</span>
                 {result.name}
               </span>
               <span className="text-sm font-black text-[#ccff00]">
                 {percentage}% <span className="text-[10px] font-normal text-[#f0f0f0]/30">[{result.count} OP]</span>
               </span>
             </div>
-            
+
             <div className="relative flex w-full overflow-hidden bg-[#f0f0f0]/10 h-[2px]">
-              <div 
-                style={{ width: `${percentage}%` }} 
+              <div
+                style={{ width: `${percentage}%` }}
                 className="h-full bg-[#ccff00] shadow-[0_0_10px_#ccff00] transition-all duration-1000 ease-out"
               />
-              <div 
+              <div
                 style={{ left: `calc(${percentage}% - 4px)` }}
                 className="absolute top-0 h-full w-2 bg-[#f0f0f0]"
               />
@@ -38,7 +38,7 @@ export const VoteTelemetry = ({ userVotedFor, pollResults, totalVotes }) => (
         );
       })}
     </div>
-    
+
     <div className="mt-8 border-t border-[#f0f0f0]/20 pt-6 text-center font-mono text-[10px] uppercase tracking-[0.3em] text-[#f0f0f0]/50">
       TOTAL_VERIFIED_NODES: <span className="font-bold text-[#ccff00]">{totalVotes}</span>
     </div>
@@ -46,21 +46,25 @@ export const VoteTelemetry = ({ userVotedFor, pollResults, totalVotes }) => (
 );
 
 export const NodeSelector = ({ options, selectedOption, setSelectedOption }) => (
-  <div className="mb-8 space-y-4">
+  <div className="space-y-3">
     {options.map((opt, idx) => (
-      <label 
-        key={idx} 
+      <label
+        key={idx}
         onClick={() => setSelectedOption(idx)}
-        className={`group flex cursor-pointer items-center border p-4 transition-none
-          ${selectedOption === idx 
-            ? 'border-[#ccff00] bg-[#ccff00] text-[#0a0a0a] shadow-[4px_4px_0px_0px_#f0f0f0]' 
-            : 'border-[#f0f0f0]/20 text-[#f0f0f0] hover:bg-[#f0f0f0] hover:text-[#0a0a0a]'}`}
+        className={`group relative flex cursor-pointer items-center border p-3 transition-colors duration-200
+          ${selectedOption === idx
+            ? 'border-[#ccff00] bg-[#ccff00]/10 text-[#ccff00] shadow-[inset_0_0_15px_rgba(204,255,0,0.1)]'
+            : 'border-[#f0f0f0]/10 bg-black/40 text-[#f0f0f0] hover:border-[#ccff00]/50 hover:bg-[#f0f0f0]/5'}`}
       >
-        <div className={`mr-4 flex h-4 w-4 flex-shrink-0 items-center justify-center border transition-none
-          ${selectedOption === idx ? 'border-[#0a0a0a] bg-[#0a0a0a]' : 'border-[#f0f0f0]/50 group-hover:border-[#0a0a0a]'}`}>
-          {selectedOption === idx && <div className="h-2 w-2 bg-[#ccff00]" />}
+        <div className={`mr-4 flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center border transition-colors
+          ${selectedOption === idx ? 'border-[#ccff00]' : 'border-[#f0f0f0]/30 group-hover:border-[#ccff00]/50'}`}>
+          {selectedOption === idx && <div className="h-1.5 w-1.5 bg-[#ccff00]" />}
         </div>
-        <span className="font-mono text-xs font-bold uppercase tracking-widest">{opt}</span>
+        <span className="font-mono text-[11px] uppercase tracking-widest">{opt}</span>
+
+        {selectedOption === idx && (
+          <span className="absolute right-0 top-0 h-full w-1 bg-[#ccff00]" />
+        )}
       </label>
     ))}
   </div>
@@ -68,8 +72,8 @@ export const NodeSelector = ({ options, selectedOption, setSelectedOption }) => 
 
 export const ProvingEngineRouter = (props) => {
   const {
-    method, startPassportFlow, setStartPassportFlow, pollId, selectedOption, 
-    manifestData, votingHubAddress, provider, handleVoteSuccess, displayInputs, 
+    method, startPassportFlow, setStartPassportFlow, pollId, selectedOption,
+    manifestData, votingHubAddress, provider, handleVoteSuccess, displayInputs,
     setZkInputs, submitLocalVote, isProving, txStatus, executeBlockchainTx
   } = props;
 
@@ -78,18 +82,18 @@ export const ProvingEngineRouter = (props) => {
     if (startPassportFlow) {
       return (
         <div className="space-y-6">
-          <button 
-            onClick={() => setStartPassportFlow(false)} 
+          <button
+            onClick={() => setStartPassportFlow(false)}
             className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.3em] text-[#f0f0f0]/50 transition-none hover:text-[#f0f0f0]"
           >
             &lt; TERM.KILL_PASSPORT_AUTH()
           </button>
           <ZKPassportStation
-            pollId={pollId} 
-            selectedOption={selectedOption} 
-            requirements={manifestData.config} 
-            votingHubAddress={votingHubAddress} 
-            provider={provider} 
+            pollId={pollId}
+            selectedOption={selectedOption}
+            requirements={manifestData.config}
+            votingHubAddress={votingHubAddress}
+            provider={provider}
             onVoteSuccess={handleVoteSuccess}
             executeBlockchainTx={executeBlockchainTx}
           />
@@ -98,8 +102,8 @@ export const ProvingEngineRouter = (props) => {
     }
     return (
       <div className="border-t border-[#f0f0f0]/20 pt-8">
-        <button 
-          onClick={() => selectedOption !== null ? setStartPassportFlow(true) : alert("ERR: NO_NODE_SELECTED")} 
+        <button
+          onClick={() => selectedOption !== null ? setStartPassportFlow(true) : alert("ERR: NO_NODE_SELECTED")}
           className="brutal-btn w-full !border-[#ccff00] !py-5 !text-[#ccff00] hover:!bg-[#ccff00] hover:!text-[#0a0a0a]"
         >
           [ AUTHENTICATE_VIA_ZK_PASSPORT ]
@@ -127,14 +131,14 @@ export const ProvingEngineRouter = (props) => {
           />
         </div>
       ))}
-      <button 
-        onClick={submitLocalVote} 
-        disabled={isProving} 
+      <button
+        onClick={submitLocalVote}
+        disabled={isProving}
         className={`brutal-btn mt-4 w-full !py-5 ${isProving ? 'pointer-events-none !border-[#f0f0f0]/20 !text-[#f0f0f0]/20' : '!border-[#ccff00] !text-[#ccff00] hover:!bg-[#ccff00] hover:!text-[#0a0a0a]'}`}
       >
         {isProving ? <span className="animate-glitch">[ PROVING_CIRCUIT... ]</span> : "GENERATE_PROOF && EXECUTE_VOTE"}
       </button>
-      
+
       {txStatus && (
         <div className="mt-6 border border-[#ccff00] bg-[#ccff00]/10 p-4 font-mono text-xs uppercase tracking-widest text-[#ccff00]">
           {txStatus}

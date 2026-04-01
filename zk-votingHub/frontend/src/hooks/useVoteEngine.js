@@ -3,14 +3,27 @@ import { ethers } from "ethers";
 import abi from "../artifacts/VotingHub.json";
 import { generateAndEncodeProof } from "../utils/prover";
 import { resolveSystemInputs } from "../utils/inputResolver/inputResolver";
-import { createGelatoEvmRelayerClient } from "@gelatocloud/gasless";
 
-const GELATO_API_KEY = import.meta.env.VITE_GELATO_API_KEY;
+import { WalletClientSigner } from "@alchemy/aa-core";
+import { createModularAccountAlchemyClient } from "@alchemy/aa-alchemy";
+import { createWalletClient, custom } from "viem";
+import { sepolia } from "viem/chains";
 
-const relayer = createGelatoEvmRelayerClient({
-    apiKey: GELATO_API_KEY,
-    testnet: true 
-});
+// --- ИСПРАВЛЕНИЕ СОВМЕСТИМОСТИ VIEM v2 И ALCHEMY ---
+// Патчим стандартный объект sepolia, возвращая структуру RPC, 
+// которую под капотом ожидает Account Kit для сборки URL с твоим API_KEY.
+const alchemySepolia = {
+    ...sepolia,
+    rpcUrls: {
+        ...sepolia.rpcUrls,
+        alchemy: {
+            http: ["https://eth-sepolia.g.alchemy.com/v2"],
+        },
+    },
+};
+
+const ALCHEMY_API_KEY = import.meta.env.VITE_ALCHEMY_API_KEY;
+const ALCHEMY_GAS_POLICY_ID = import.meta.env.VITE_ALCHEMY_GAS_POLICY_ID;
 
 const resolveGateway = (uri) => {
     if (!uri) return "";
@@ -56,7 +69,7 @@ export function useVoteEngine(pollId, votingHubAddress, provider) {
 
                 setEndTime(Number(pollData.endTime));
                 setOptions(await contract.getOptions(pollId));
-                
+
                 setIsSponsored(pollData.isSponsored);
                 setPollSubject(pollData.question);
                 setSponsorAddress(pollData.isSponsored ? pollData.creator : "none");
@@ -65,7 +78,7 @@ export function useVoteEngine(pollId, votingHubAddress, provider) {
                 if (savedVotes[pollId.toString()]) {
                     setUserVotedFor(savedVotes[pollId.toString()]);
                 }
-                
+
                 const res = await fetch(resolveGateway(pollData.metadataURI));
                 if (!res.ok) throw new Error("IPFS_MANIFEST_UNREACHABLE");
 
@@ -87,10 +100,8 @@ export function useVoteEngine(pollId, votingHubAddress, provider) {
         fetchPollData();
     }, [pollId, votingHubAddress, provider]);
 
-    // 2. TTL Timer Engine
     useEffect(() => {
         if (!endTime) return;
-
         const updateTimer = () => {
             const now = Math.floor(Date.now() / 1000);
             if (now >= endTime) {
@@ -105,13 +116,11 @@ export function useVoteEngine(pollId, votingHubAddress, provider) {
                 setTimeLeftStr(`${d > 0 ? d + 'd ' : ''}${h}h ${m}m ${s}s`);
             }
         };
-
         updateTimer();
         const timerId = setInterval(updateTimer, 1000);
         return () => clearInterval(timerId);
     }, [endTime]);
 
-    // 3. Telemetry / Results Fetcher
     useEffect(() => {
         const fetchResults = async () => {
             if ((isClosed || userVotedFor) && options.length > 0 && provider) {
@@ -133,7 +142,6 @@ export function useVoteEngine(pollId, votingHubAddress, provider) {
         fetchResults();
     }, [isClosed, userVotedFor, options, provider, pollId, votingHubAddress]);
 
-    // 4. Submission Handlers
     const handleVoteSuccess = () => {
         const savedVotes = JSON.parse(localStorage.getItem("zkVotes") || "{}");
         savedVotes[pollId.toString()] = options[selectedOption];
@@ -144,56 +152,112 @@ export function useVoteEngine(pollId, votingHubAddress, provider) {
     };
 
     const executeBlockchainTx = async (encodedProofData) => {
-        if (selectedOption === null) return alert("ERR: NO_NODE_SELECTED");
-        console.log("SPD?: ", isSponsored);
+        if (selectedOption === null) {
+            setIsProving(false);
+            return alert("ERR: NO_NODE_SELECTED");
+        }
 
-        setIsProving(true);
         try {
-            const signer = await provider.getSigner();
+            if (!window.ethereum) throw new Error("Wallet not found!");
+
+            const browserProvider = new ethers.BrowserProvider(window.ethereum);
+            const network = await browserProvider.getNetwork();
+            if (Number(network.chainId) !== 11155111) {
+                throw new Error("Please switch MetaMask to Sepolia Testnet!");
+            }
+
+            const signer = await browserProvider.getSigner();
             const hubContract = new ethers.Contract(votingHubAddress, abi.abi, signer);
 
+            let isAlchemySuccess = false;
+
             if (isSponsored) {
-                if (!GELATO_API_KEY) throw new Error("API_KEY_MISSING_OR_INVALID");
-                
-                setTxStatus("> RELAYING_GASLESS_TRANSACTION...");
-
-                const { data } = await hubContract.vote.populateTransaction(
-                    pollId,
-                    selectedOption,
-                    encodedProofData
-                );
-
-                const network = await provider.getNetwork();
-                const chainId = Number(network.chainId); 
-
-                const taskId = await relayer.sendTransaction({
-                    chainId: chainId,
-                    data: data,
-                    to: votingHubAddress,
-                    gasLimit: "2500000"
-                });
-
-                setTxStatus(`> TRACKING_RELAY_TASK: ${taskId.slice(0, 10)}...`);
-
                 try {
-                    const receipt = await relayer.waitForReceipt({ id: taskId });
-                    setTxStatus("> SUCCESS: RELAY_TRANSACTION_MINED.");
-                    console.log(`> TX_HASH: ${receipt.transactionHash}`);
-                    handleVoteSuccess();
-                } catch (error) {
-                    throw new Error(`RELAY_FATAL: ${error.message}`);
-                }
-                
-            } else {
-                setTxStatus("> AWAITING_WALLET_CONFIRMATION...");
-                const tx = await hubContract.vote(pollId, selectedOption, encodedProofData, { gasLimit: 2500000 });
+                    if (!ALCHEMY_API_KEY || ALCHEMY_API_KEY === "undefined") {
+                        throw new Error("VITE_ALCHEMY_API_KEY is not defined in .env");
+                    }
 
+                    setTxStatus("> INITIALIZING_SMART_ACCOUNT (ERC-4337)...");
+
+                    const [account] = await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+                    const viemWalletClient = createWalletClient({
+                        account,
+                        chain: alchemySepolia,
+                        transport: custom(window.ethereum),
+                    });
+
+                    const alchemySigner = new WalletClientSigner(
+                        viemWalletClient,
+                        "json-rpc"
+                    );
+
+                    const alchemyClient = await createModularAccountAlchemyClient({
+                        apiKey: ALCHEMY_API_KEY,
+                        chain: alchemySepolia,
+                        signer: alchemySigner,
+                        gasManagerConfig: {
+                            policyId: ALCHEMY_GAS_POLICY_ID,
+                        },
+                    });
+
+                    setTxStatus("> REQUESTING_PAYMASTER_SPONSORSHIP...");
+
+                    const { data } = await hubContract.vote.populateTransaction(
+                        pollId,
+                        selectedOption,
+                        encodedProofData
+                    );
+
+                    const { hash: uoHash } = await alchemyClient.sendUserOperation({
+                        uo: {
+                            target: votingHubAddress,
+                            data: data,
+                        },
+                        overrides: {
+                            callGasLimit: 5000000n,
+                        }
+                    });
+
+                    setTxStatus(`> TRACKING_USER_OP: ${uoHash.slice(0, 10)}...`);
+
+                    const txHash = await alchemyClient.waitForUserOperationTransaction({
+                        hash: uoHash,
+                    });
+
+                    const receipt = await alchemyClient.getUserOperationReceipt(uoHash);
+                    
+                    if (receipt && !receipt.success) {
+                        throw new Error("SPONSOR_RESERVOIR_EMPTY_OR_REVERTED");
+                    }
+
+                    setTxStatus("> SUCCESS: VOTE_CAST_VIA_SMART_ACCOUNT.");
+                    console.log(`> BUNDLED_TX_HASH: ${txHash}`);
+                    isAlchemySuccess = true;
+                    handleVoteSuccess();
+
+                } catch (alchemyErr) {
+                    console.warn("Alchemy Sponsor Flow Failed:", alchemyErr);
+                    setTxStatus("> SPONSOR_UNAVAILABLE: FALLING_BACK_TO_WALLET...");
+                    await new Promise(res => setTimeout(res, 2000));
+                }
+            }
+
+            if (!isSponsored || (!isAlchemySuccess && isSponsored)) {
+                setTxStatus(isSponsored 
+                    ? "> AWAITING_WALLET_CONFIRMATION (FALLBACK: USER PAYS)..."
+                    : "> AWAITING_WALLET_CONFIRMATION (USER PAYS GAS)..."
+                );
+                
+                const tx = await hubContract.vote(pollId, selectedOption, encodedProofData, { gasLimit: 5000000 });
                 setTxStatus("> VERIFYING_BLOCK_INCLUSION...");
                 await tx.wait();
                 handleVoteSuccess();
             }
+
         } catch (err) {
-            setTxStatus(`> ${err.reason || err.message}`);
+            console.error("TX_ERROR_DETAILS:", err);
+            setTxStatus(`> ERROR: ${err.shortMessage || err.message}`);
             throw err;
         } finally {
             setIsProving(false);
@@ -201,28 +265,40 @@ export function useVoteEngine(pollId, votingHubAddress, provider) {
     }
 
     const submitLocalVote = async () => {
+        if (isProving) return;
+
+        setIsProving(true);
         setTxStatus("> RESOLVING_LOCAL_INPUTS...");
+
         try {
             const hubContract = new ethers.Contract(votingHubAddress, abi.abi, provider);
-            
             if (selectedOption === null) throw new Error("Please select an option first.");
 
             const pollData = await hubContract.polls(pollId);
             if (!pollData.exists) throw new Error("This poll does not exist on-chain.");
 
-            const inputState = { 
-                ...zkInputs, 
-                pollId: pollId.toString(), 
+            const inputState = {
+                ...zkInputs,
+                pollId: pollId.toString(),
                 optionId: selectedOption.toString()
             };
 
-            const fullInputs = await resolveSystemInputs(manifestData, inputState, pollData.verifierContract, provider);
+            const fullInputs = await resolveSystemInputs(
+                manifestData,
+                inputState,
+                pollData.verifierContract,
+                provider,
+                pollData.databaseURI
+            );
 
             setTxStatus("> GENERATING_UNIVERSAL_PAYLOAD...");
             const encodedProofData = await generateAndEncodeProof(manifestData, fullInputs);
+
             await executeBlockchainTx(encodedProofData);
+
         } catch (err) {
             setTxStatus(`> ${err.reason || err.message}`);
+            setIsProving(false);
         }
     };
 

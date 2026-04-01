@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useZkHub } from './hooks/useZkHub';
 
 import contractAddressData from './artifacts/contractAddress.json';
@@ -28,14 +28,22 @@ export default function App() {
     connectWallet,
     fetchPolls,
     executeDeepScan,
-    getFilteredPolls
+    getFilteredPolls,
+    refreshMyVotes // Достаем функцию обновления
   } = useZkHub(HUB_ADDRESS);
+
+  // --- ДОБАВЛЕНО: Синхронизируем локальные логи при возврате на дашборд ---
+  useEffect(() => {
+    if (currentView === 'dashboard') {
+      refreshMyVotes();
+    }
+  }, [currentView, refreshMyVotes]);
 
   const goToVote = (pollId) => {
     setSelectedPollId(pollId);
     setCurrentView('vote');
   };
-
+  
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-[#0a0a0a] font-sans text-[#f0f0f0] selection:bg-[#ccff00] selection:text-[#0a0a0a]">
       
@@ -60,7 +68,7 @@ export default function App() {
       )}
 
       {/* Main Content Area */}
-      <main className="relative z-10 mx-auto h-screen w-full max-w-7xl flex-1 overflow-y-auto px-6 pb-24 pt-32">
+      <main className="relative z-10 mx-auto h-screen w-full max-w-7xl flex-1 overflow-y-auto px-6 pb-24 pt-32 custom-scrollbar">
         {!account ? (
           <LandingScreen connectWallet={connectWallet} />
         ) : (

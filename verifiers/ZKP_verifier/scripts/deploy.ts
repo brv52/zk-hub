@@ -1,54 +1,43 @@
 import { ethers, network, run } from "hardhat";
+const { saveDeploymentInfo } = require("../../logger.js");
 
 async function main() {
-    console.log(`\nStarting Deployment to network: ${network.name}`);
-    
-    const [deployer] = await ethers.getSigners();
-    console.log(`Deploying with account: ${deployer.address}`);
+    console.log("> INITIATING_DEPLOYMENT: ZK_PASSPORT");
+    console.log(`> NETWORK: ${network.name}`);
 
-    const domain = "localhost"; 
-    const expectedMinAge = 18;  
-    const expectedNationalities = ["CZE", "RUS"];
-
-    console.log(`\nDeploying ZKPassport Poll Wrapper...`);
-    console.log(`   - Domain: ${domain}`);
-    console.log(`   - Min Age: ${expectedMinAge}`);
-    console.log(`   - Nationalities: ${expectedNationalities.join(", ")}`);
-    
     const Wrapper = await ethers.getContractFactory("ZKPassportPollWrapper");
     
-    const wrapper = await Wrapper.deploy(domain, expectedMinAge, expectedNationalities);
-
+    const wrapper = await Wrapper.deploy();
     await wrapper.waitForDeployment();
     const wrapperAddress = await wrapper.getAddress();
     
-    console.log(`\n [->] ZKPassportPollWrapper deployed to: ${wrapperAddress}`);
+    console.log(`> STATELESS_WRAPPER_DEPLOYED: ${wrapperAddress}`);
+    saveDeploymentInfo('ZKPassport', 'contractAddress', wrapperAddress);
 
     if (network.name !== "hardhat" && network.name !== "localhost") {
-        console.log("\nWaiting for 5 block confirmations before verification...");
+        console.log("> AWAITING_BLOCK_CONFIRMATIONS...");
         const tx = wrapper.deploymentTransaction();
-        if (tx) {
-            await tx.wait(5);
-        }
+        if (tx) await tx.wait(5);
         
-        console.log("Verifying ZKPassportPollWrapper on Etherscan...");
+        console.log("> VERIFYING_ON_ETHERSCAN...");
         try {
             await run("verify:verify", {
                 address: wrapperAddress,
-                constructorArguments: [domain, expectedMinAge, expectedNationalities], 
+                constructorArguments: [], 
             });
-            console.log("Contract verified successfully!");
+            console.log("> VERIFICATION_SUCCESS");
         } catch (error: any) {
             if (error.message.toLowerCase().includes("already verified")) {
-                console.log("ℹAlready verified.");
+                console.log("> STATUS: ALREADY_VERIFIED");
             } else {
-                console.error("Verification failed:", error);
+                console.error("> VERIFICATION_ERROR:", error);
             }
         }
     }
+    console.log("> STATUS: SUCCESS");
 }
 
 main().catch((error) => {
-    console.error(error);
+    console.error("> ERROR:", error);
     process.exitCode = 1;
 });

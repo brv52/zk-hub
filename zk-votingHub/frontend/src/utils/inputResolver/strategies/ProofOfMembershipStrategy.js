@@ -1,90 +1,140 @@
 import { BaseStrategy } from "./BaseStrategy";
 import { buildPoseidon, buildMimc7 } from "circomlibjs";
-
-function validateInputs(manifest, userInputs) {
-    const requiredKeys = manifest.inputOrder || Object.keys(manifest.userInputs || {});
-    
-    for (const key of requiredKeys) {
-        const value = userInputs[key];
-        if (value === undefined || value === null || value === "") {
-            throw new Error(`Validation Error: Missing required input '${key}'.`);
-        }
-        if (isNaN(Number(value))) {
-            throw new Error(`Validation Error: Input '${key}' must be a numeric string. Received: ${value}`);
-        }
-    }
-    
-    return true;
-}
+import { ethers } from "ethers";
+import { Buffer } from "buffer";
 
 export class ProofOfMembershipStrategy extends BaseStrategy {
-    async resolve(manifest, userInputs, verifierAddress, provider) {
-        const config = manifest.config || {};
-        
-        if (!validateInputs(manifest, userInputs)) {
-            throw new Error("ProofOfMembership Error: Inputs from manifest do not match User Inputs");
+
+    async _getHashFunction(algorithm) {
+        const algo = (algorithm || "poseidon").toLowerCase();
+        if (algo === "poseidon") {
+            const poseidon = await buildPoseidon();
+            const F = poseidon.F;
+            return (inputs) => F.toObject(poseidon(inputs));
+        } else if (algo === "mimc7") {
+            const mimc7 = await buildMimc7();
+            const F = mimc7.F;
+            return (inputs) => F.toObject(mimc7.multiHash(inputs));
+        } else {
+            throw new Error(`Unsupported hash algorithm: ${algo}`);
         }
+    }
+
+    _formatInputToBigInt(value, fieldType) {
+        if (value === undefined || value === null || value === '') {
+            throw new Error(`MISSING_FIELD_VALUE`);
+        }
+        if (fieldType === 'number') {
+            return BigInt(value);
+        } else {
+            return BigInt('0x' + Buffer.from(value.toString()).toString('hex'));
+        }
+    }
+
+    _prepareInputs(manifest, dataSource) {
+        return manifest.registrySchema.map(field => {
+            const value = dataSource[field.name];
+            return this._formatInputToBigInt(value, field.type);
+        });
+    }
+
+    async buildDatabase(manifest, rawDataset) {
+        const depth = manifest.config.depth || 10;
+        const arity = manifest.config.arity || 2;
+        const hashFn = await this._getHashFunction(manifest.config.hashAlgorithm);
         
-        const publicLeaves = await this.fetchDataset(config.treeSourceURI);
+        const safeDataset = rawDataset.map(row => {
+            const inputs = this._prepareInputs(manifest, row);
+            return hashFn(inputs).toString(); 
+        });
+
+        let currentLevel = safeDataset.map(leaf => BigInt(leaf));
+        let currentEmptyNodeValue = BigInt(manifest.config.emptyNodeValue || "0");
+
+        for (let i = 0; i < depth; i++) {
+            const nextLevel = [];
+            for (let j = 0; j < currentLevel.length; j += arity) {
+                const chunkToHash = [];
+                for (let k = 0; k < arity; k++) {
+                    const nodeIndex = j + k;
+                    chunkToHash.push(nodeIndex < currentLevel.length ? currentLevel[nodeIndex] : currentEmptyNodeValue);
+                }
+                nextLevel.push(BigInt(hashFn(chunkToHash)));
+            }
+            currentLevel = nextLevel;
+            const emptyChunkToHash = Array(arity).fill(currentEmptyNodeValue);
+            currentEmptyNodeValue = BigInt(hashFn(emptyChunkToHash));
+        }
+
+        const calculatedRoot = currentLevel[0].toString();
+        
+        const configValues = manifest.configKeys.map(key => {
+            if (key.toLowerCase().includes('root')) return calculatedRoot;
+            const value = manifest.config[key];
+            if (value === undefined || value === null) throw new Error(`CONFIG_ERROR: ${key}`);
+            return value;
+        });
+        
+        const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+        const encodedConfig = abiCoder.encode(manifest.configABI, configValues);
+
+        return { safeDataset, encodedConfig };
+    }
+
+    async resolve(manifest, userInputs, verifierAddress, provider, databaseURI) {
+        const publicLeaves = await this.fetchDataset(databaseURI);
         const treeData = await this.buildClientTree(publicLeaves, manifest, userInputs);
 
+        const formattedUserInputs = {};
+        for (const key of (manifest.inputOrder || [])) {
+            const schemaField = manifest.registrySchema?.find(f => f.name === key);
+            formattedUserInputs[key] = this._formatInputToBigInt(userInputs[key], schemaField?.type).toString();
+        }
+
+        // Эвристическая проверка порогов (если добавлены)
+        for (const [confKey, confValue] of Object.entries(manifest.config || {})) {
+            if (confKey.toLowerCase().startsWith('min')) {
+                // Пытаемся найти поле 'value' (или аналогичное числовое), чтобы сверить порог
+                const valKey = Object.keys(formattedUserInputs).find(k => manifest.registrySchema?.find(f => f.name === k)?.type === 'number');
+                if (valKey && Number(userInputs[valKey]) < Number(confValue)) {
+                    throw new Error(`INELIGIBLE: ${valKey} is below required ${confKey}`);
+                }
+            }
+        }
+
         const allAvailableData = {
-            ...userInputs, 
-            ...config,
+            ...userInputs,
+            ...formattedUserInputs,
+            ...manifest.config,
             pathElements: treeData.pathElements,
             pathIndices: treeData.pathIndices,
-            merkleRoot: treeData.calculatedRoot
+            // Дублируем корень под всеми именами
+            merkleRoot: treeData.calculatedRoot,
+            stateRoot: treeData.calculatedRoot,
+            expectedMerkleRoot: treeData.calculatedRoot,
+            root: treeData.calculatedRoot
         };
 
-        const STRATEGY_DIRECTIVES = [
-            "treeSourceURI", 
-            "depth", 
-            "arity", 
-            "hashAlgorithm", 
-            "emptyNodeValue"
-        ];
+        let expectedSignals = manifest.circuitSignals;
+        if (!expectedSignals) {
+            console.warn("WARNING: manifest.circuitSignals is missing. Using heuristic fallback.");
+            const rootName = manifest.configKeys?.find(k => k.toLowerCase().includes('root'))?.replace(/^expected/i, '') || 'merkleRoot';
+            const circomRootKey = rootName.charAt(0).toLowerCase() + rootName.slice(1);
+            expectedSignals = [circomRootKey, "pollId", "optionId", "pathElements", "pathIndices", ...Object.keys(formattedUserInputs), ...Object.keys(manifest.config || {})];
+        }
 
-        const customConfigSignals = Object.keys(config).filter(
-            key => !STRATEGY_DIRECTIVES.includes(key)
-        );
-
-        const expectedCircuitSignals = [
-            "merkleRoot", 
-            "pollId", 
-            "optionId", 
-            "pathElements", 
-            "pathIndices",
-            ...(manifest.inputOrder || []),
-            ...customConfigSignals
-        ];
-
-        return this.sanitizeCircuitInputs(allAvailableData, expectedCircuitSignals);
+        return this.sanitizeCircuitInputs(allAvailableData, expectedSignals);
     }
 
     async buildClientTree(publicLeaves, manifest, userInputs) {
-        const config = manifest.config || {};
-        const depth = config.depth || 10;
-        const arity = config.arity || 2;
-        const emptyNodeValue = BigInt(config.emptyNodeValue || "0");
-        const algorithm = (config.hashAlgorithm || "poseidon").toLowerCase();
+        const depth = manifest.config.depth || 10;
+        const arity = manifest.config.arity || 2;
+        const hashFn = await this._getHashFunction(manifest.config.hashAlgorithm);
 
-        let hashFn;
+        const orderedInputs = this._prepareInputs(manifest, userInputs);
+        const myLeaf = hashFn(orderedInputs).toString();
 
-        if (algorithm === "poseidon") {
-            const poseidon = await buildPoseidon();
-            const F = poseidon.F;
-            hashFn = (inputs) => F.toObject(poseidon(inputs));
-        } else if (algorithm === "mimc7") {
-            const mimc7 = await buildMimc7();
-            const F = mimc7.F;
-            hashFn = (inputs) => F.toObject(mimc7.multiHash(inputs));
-        } else {
-            throw new Error(`Unsupported hash algorithm: ${algorithm}`);
-        }
-
-        const orderedInputs = manifest.inputOrder.map(key => BigInt(userInputs[key]));
-        const myLeaf = hashFn(orderedInputs);
-        let currentIndex = publicLeaves.findIndex(leaf => leaf.toString() === myLeaf.toString());
+        let currentIndex = publicLeaves.findIndex(leaf => leaf.toString() === myLeaf);
         
         if (currentIndex === -1) {
             throw new Error("Your generated credential does not exist in the authorized registry.");
@@ -93,12 +143,11 @@ export class ProofOfMembershipStrategy extends BaseStrategy {
         const pathElements = [];
         const pathIndices = [];
         let currentLevel = publicLeaves.map(l => BigInt(l));
-        let currentEmptyNodeValue = emptyNodeValue;
+        let currentEmptyNodeValue = BigInt(manifest.config.emptyNodeValue || "0");
         
         for (let i = 0; i < depth; i++) {
             const chunkIndex = Math.floor(currentIndex / arity);
             const positionInChunk = currentIndex % arity;
-            
             pathIndices.push(positionInChunk);
             
             const siblings = [];
@@ -108,7 +157,6 @@ export class ProofOfMembershipStrategy extends BaseStrategy {
                 const nodeValue = nodeIndex < currentLevel.length ? currentLevel[nodeIndex] : currentEmptyNodeValue;
                 siblings.push(nodeValue.toString());
             }
-            
             pathElements.push(arity === 2 ? siblings[0] : siblings);
 
             const nextLevel = [];
@@ -118,12 +166,10 @@ export class ProofOfMembershipStrategy extends BaseStrategy {
                     const nodeIndex = j + k;
                     chunkToHash.push(nodeIndex < currentLevel.length ? currentLevel[nodeIndex] : currentEmptyNodeValue);
                 }
-                nextLevel.push(hashFn(chunkToHash));
+                nextLevel.push(BigInt(hashFn(chunkToHash)));
             }
-            
             currentLevel = nextLevel;
             currentIndex = chunkIndex;
-
             const emptyChunkToHash = Array(arity).fill(currentEmptyNodeValue);
             currentEmptyNodeValue = BigInt(hashFn(emptyChunkToHash));
         }

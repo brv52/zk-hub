@@ -3,9 +3,9 @@ import { useGasManagement } from "../hooks/useGasManagement";
 
 export default function GasRefillStation({ pollId, votingHubAddress, provider }) {
     const { currentBalance, topUp, isFunding, fetchBalance } = useGasManagement(pollId, votingHubAddress, provider);
-    const [customAmount, setCustomAmount] = useState("0.0005");
+    const [customAmount, setCustomAmount] = useState("0.01");
 
-    useEffect(() => { fetchBalance(); }, []);
+    useEffect(() => { fetchBalance(); }, [fetchBalance]);
 
     return (
         <div className="glass-panel border-[#ccff00]/30 bg-[#ccff00]/5 p-6 shadow-[0_0_20px_rgba(204,255,0,0.05)]">
@@ -37,7 +37,7 @@ export default function GasRefillStation({ pollId, votingHubAddress, provider })
                     <label className="mb-2 block font-mono text-[9px] uppercase tracking-widest text-[#f0f0f0]/30">Injection_Quantity (SEP_ETH):</label>
                     <input 
                         type="number"
-                        step="0.0005"
+                        step="0.005"
                         value={customAmount}
                         onChange={(e) => setCustomAmount(e.target.value)}
                         className="w-full border border-[#f0f0f0]/20 bg-transparent p-4 font-mono text-xs uppercase tracking-widest text-[#f0f0f0] outline-none transition-none focus:border-[#ccff00] focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
@@ -54,8 +54,8 @@ export default function GasRefillStation({ pollId, votingHubAddress, provider })
             </div>
 
             <p className="mt-4 font-mono text-[8px] leading-relaxed text-[#f0f0f0]/30">
-                &gt; WARN: GAS_CREDITS ARE DEDUCTED PER ANONYMOUS VOTE. <br/>
-                &gt; CURRENT_RATE: 0.0005 ETH / VALID_PAYLOAD.
+                &gt; WARN: GAS IS DEDUCTED DYNAMICALLY BASED ON NETWORK CONGESTION.<br/>
+                &gt; ALGORITHM: (gasUsed * tx.gasprice). UNUSED FUNDS SECURED IN CONTRACT.
             </p>
         </div>
     );
