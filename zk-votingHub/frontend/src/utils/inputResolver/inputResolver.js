@@ -19,6 +19,6 @@ export async function resolveSystemInputs(manifest, userInputs, verifierAddress,
     return await getStrategy(manifest.verificationMethod).resolve(manifest, userInputs, verifierAddress, provider, databaseURI);
 }
 
-export async function buildDatabaseFromStrategy(manifest, rawDataset) {
-    return await getStrategy(manifest.verificationMethod).buildDatabase(manifest, rawDataset);
+export async function buildDatabaseFromStrategy(manifest, rawDataset, isPreHashed = false) {
+    return await getStrategy(manifest.verificationMethod).buildDatabase(manifest, rawDataset, isPreHashed);
 }

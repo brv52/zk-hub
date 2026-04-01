@@ -4,7 +4,7 @@ import { ethers } from "ethers";
 
 export class ProofOfStorageStrategy extends BaseStrategy {
 
-    async buildDatabase(manifest, rawDataset) {
+    async buildDatabase(manifest, rawDataset, isPreHashed = false) {
         const depth = manifest.config.depth || 10;
         const poseidon = await buildPoseidon();
         const F = poseidon.F;

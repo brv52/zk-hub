@@ -3,7 +3,7 @@ import { ethers } from "ethers";
 
 export class ZKPassportStrategy extends BaseStrategy {
 
-    async buildDatabase(manifest, rawDataset) {
+    async buildDatabase(manifest, rawDataset, isPreHashed = false) {
         const configValues = manifest.configKeys.map(key => {
             const val = manifest.config[key];
             if (val !== undefined) return val;

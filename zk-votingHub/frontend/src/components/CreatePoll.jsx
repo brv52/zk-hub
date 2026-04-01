@@ -116,7 +116,8 @@ export default function CreatePoll({ votingHubAddress, provider }) {
         csvFile, setCsvFile,
         manualRows, handleManualRowChange, addManualRow, removeManualRow,
         handlePresetSelect, PRESET_VERIFIERS,
-        getDurationInSeconds, handleSubmit
+        getDurationInSeconds, handleSubmit,
+        isPreHashed, setIsPreHashed
     } = useCreatePoll(votingHubAddress, provider);
 
     const applyPreset = (val, unit) => {
@@ -280,6 +281,29 @@ export default function CreatePoll({ votingHubAddress, provider }) {
                                 options={[{ label: 'Upload CSV Dataset', value: 'file' }, { label: 'Manual Entry', value: 'manual' }]}
                                 active={dbMode} onChange={setDbMode}
                             />
+
+                            <div className={`border p-4 transition-colors duration-300 ${isPreHashed ? 'border-[#ccff00] bg-[#ccff00]/5' : 'border-[#f0f0f0]/20 bg-black/40'}`}>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <label className="mb-1 block font-mono text-[9px] uppercase tracking-[0.2em] text-[#f0f0f0]">
+                                            IDENTITY COMMITMENTS // WEB3 MODE
+                                        </label>
+                                        <p className="font-mono text-[8px] uppercase tracking-widest text-[#f0f0f0]/40 mt-1 leading-relaxed">
+                                            {isPreHashed
+                                                ? `DATA IS PRE-HASHED VIA [ ${manifest.config.hashAlgorithm?.toUpperCase() || 'POSEIDON'} ]. SKIPPING LOCAL ENCRYPTION.`
+                                                : "RAW DATA PROVIDED. WILL BE HASHED LOCALLY BEFORE UPLOAD."}
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsPreHashed(!isPreHashed)}
+                                        className={`h-6 w-12 border p-1 transition-colors duration-300 flex-shrink-0 ${isPreHashed ? 'border-[#ccff00]' : 'border-[#f0f0f0]/30'}`}
+                                    >
+                                        <div className={`h-full w-1/2 transition-transform duration-300 ease-out ${isPreHashed ? 'translate-x-full bg-[#ccff00]' : 'translate-x-0 bg-[#f0f0f0]/30'}`} />
+                                    </button>
+                                </div>
+                            </div>
 
                             {dbMode === 'file' ? (
                                 <div className="relative">

@@ -24,10 +24,16 @@ export class ProofOfMembershipStrategy extends BaseStrategy {
         if (value === undefined || value === null || value === '') {
             throw new Error(`MISSING_FIELD_VALUE`);
         }
+        
+        const strVal = value.toString().trim();
+        
         if (fieldType === 'number') {
-            return BigInt(value);
+            return BigInt(strVal);
         } else {
-            return BigInt('0x' + Buffer.from(value.toString()).toString('hex'));
+            if (strVal.startsWith('0x') && /^0x[a-fA-F0-9]+$/.test(strVal)) {
+                return BigInt(strVal);
+            }
+            return BigInt('0x' + Buffer.from(strVal).toString('hex'));
         }
     }
 
@@ -38,14 +44,19 @@ export class ProofOfMembershipStrategy extends BaseStrategy {
         });
     }
 
-    async buildDatabase(manifest, rawDataset) {
+    async buildDatabase(manifest, rawDataset, isPreHashed = false) {
         const depth = manifest.config.depth || 10;
         const arity = manifest.config.arity || 2;
         const hashFn = await this._getHashFunction(manifest.config.hashAlgorithm);
 
         const safeDataset = rawDataset.map(row => {
-            const inputs = this._prepareInputs(manifest, row);
-            return hashFn(inputs).toString();
+            if (isPreHashed) {
+                const primaryFieldName = manifest.registrySchema[0].name;
+                return BigInt(row[primaryFieldName].toString().trim()).toString();
+            } else {
+                const inputs = this._prepareInputs(manifest, row);
+                return hashFn(inputs).toString();
+            }
         });
 
         let currentLevel = safeDataset.map(leaf => BigInt(leaf));

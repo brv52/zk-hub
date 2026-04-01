@@ -45,6 +45,8 @@ export function useCreatePoll(votingHubAddress, provider) {
     const [status, setStatus] = useState({ type: '', message: '' });
     const [isSponsored, setIsSponsored] = useState(false);
 
+    const [isPreHashed, setIsPreHashed] = useState(false);
+
     useEffect(() => {
         if (!formData.manifestURI) {
             setManifest(null);
@@ -150,7 +152,7 @@ export function useCreatePoll(votingHubAddress, provider) {
             if (isNaN(Number(strVal)) || Number(strVal) < 0) return 'INVALID_NUMERIC_VALUE';
         }
 
-        return null; // Всё четко
+        return null;
     };
 
     const handleSubmit = async (e) => {
@@ -193,7 +195,7 @@ export function useCreatePoll(votingHubAddress, provider) {
             }
 
             setStatus({ type: 'info', message: 'ENCRYPTING_DATASET & COMPUTING_ZK_STATE_ROOT...' });
-            const { safeDataset, encodedConfig } = await buildDatabaseFromStrategy(manifest, rawDataset);
+            const { safeDataset, encodedConfig } = await buildDatabaseFromStrategy(manifest, rawDataset, isPreHashed);
 
             setStatus({ type: 'info', message: 'UPLOADING_SAFE_DATASET_TO_IPFS...' });
             const databaseURI = await pinDatasetToIPFS(safeDataset);
@@ -241,6 +243,7 @@ export function useCreatePoll(votingHubAddress, provider) {
         manifest, isManifestLoading, csvFile, setCsvFile,
         manualRows, handleManualRowChange, addManualRow,
         handlePresetSelect, PRESET_VERIFIERS, removeManualRow,
-        getDurationInSeconds, handleSubmit
+        getDurationInSeconds, handleSubmit,
+        isPreHashed, setIsPreHashed
     };
 }
