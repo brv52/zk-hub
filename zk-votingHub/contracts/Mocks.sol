@@ -2,16 +2,38 @@
 pragma solidity ^0.8.21;
 
 contract MockForwarder {
-    function execute(address target, bytes calldata data) external returns (bool, bytes memory) {
-        bytes memory fullData = abi.encodePacked(data, msg.sender);
-        (bool success, bytes memory returnData) = target.call(fullData);
-        return (success, returnData);
+    function execute(
+        address target,
+        bytes calldata data
+    ) external payable returns (bytes memory) {
+        (bool success, bytes memory returndata) = target.call{value: msg.value}(
+            data
+        );
+        if (!success) {
+            if (returndata.length > 0) {
+                assembly {
+                    let returndata_size := mload(returndata)
+                    revert(add(32, returndata), returndata_size)
+                }
+            } else {
+                revert("Forwarder: Subcall reverted");
+            }
+        }
+        return returndata;
     }
 }
 
 contract MockVerifier {
-    function verifyProof(uint256, uint256, bytes calldata proofData) external pure returns (bool, bytes32) {
-        (,,, uint256[] memory signals) = abi.decode(proofData, (uint[2], uint[2][2], uint[2], uint256[]));
-        return (true, bytes32(signals[0]));
+    function verifyProof(
+        uint256,
+        uint256,
+        bytes calldata proofData,
+        bytes calldata
+    ) external pure returns (bool isValid, bytes32 nullifier) {
+        (, , , uint256[] memory publicSignals) = abi.decode(
+            proofData,
+            (uint256[2], uint256[2][2], uint256[2], uint256[])
+        );
+        return (true, bytes32(publicSignals[0]));
     }
 }
