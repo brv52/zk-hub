@@ -25,6 +25,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-qr-code": "^2.0.18",
+    "snarkjs": "^0.7.6",
     "viem": "^2.47.6"
   },
   "devDependencies": {
