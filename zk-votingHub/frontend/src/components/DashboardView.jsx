@@ -24,7 +24,6 @@ export default function DashboardView({
 
   return (
     <div className="w-full">
-      { }
       <div className="glass-panel mb-12 flex flex-col items-stretch justify-between gap-4 p-4 lg:flex-row lg:items-center">
         <div className="relative flex flex-1 items-center gap-3 border border-[#f0f0f0]/20 bg-[#0a0a0a] p-3">
           <span className="hidden whitespace-nowrap text-xs font-bold tracking-widest text-[#ccff00] sm:inline">
@@ -88,7 +87,7 @@ export default function DashboardView({
         </span>
       </div>
 
-      { }
+      
       <div>
         {isLoadingPolls || isDeepScanning ? (
           <div className="glass-panel flex flex-col items-center justify-center border-dashed border-[#ccff00]/50 p-20">

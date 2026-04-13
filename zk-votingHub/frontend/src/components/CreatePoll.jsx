@@ -142,7 +142,6 @@ export default function CreatePoll({ votingHubAddress, provider }) {
     return (
         <div className="mx-auto w-full max-w-3xl space-y-6 pb-12">
 
-            { }
             <div className="mb-6 flex flex-col items-start justify-between gap-3 border-b border-[#f0f0f0]/20 pb-4 md:flex-row md:items-end">
                 <div>
                     <h2 className="font-display text-3xl font-black uppercase tracking-widest text-[#ccff00] drop-shadow-[0_0_10px_rgba(204,255,0,0.2)]">
@@ -161,7 +160,6 @@ export default function CreatePoll({ votingHubAddress, provider }) {
 
             <form onSubmit={handleSubmit} className="space-y-6">
 
-                { }
                 <div className="glass-panel relative z-40 p-5 md:p-6 !overflow-visible">
                     <h3 className="mb-6 font-display text-xl font-black uppercase tracking-widest text-[#f0f0f0] flex items-center gap-2">
                         <span className="text-[#ccff00] opacity-50">&gt;</span> CORE_METADATA
@@ -217,7 +215,6 @@ export default function CreatePoll({ votingHubAddress, provider }) {
                     </div>
                 </div>
 
-                { }
                 <div className="glass-panel relative z-50 p-5 md:p-6 !overflow-visible">
                     <div className="mb-6 flex items-center justify-between">
                         <h3 className="font-display text-xl font-black uppercase tracking-widest text-[#f0f0f0] flex items-center gap-2">
@@ -262,7 +259,6 @@ export default function CreatePoll({ votingHubAddress, provider }) {
                     </div>
                 </div>
 
-                { }
                 {manifest && manifest.registrySchema && manifest.registrySchema.length > 0 && (
                     <div className="glass-panel relative z-30 p-5 md:p-6 animate-fade-in !overflow-visible">
                         <div className="absolute right-0 top-0 border-b border-l border-[#ccff00]/30 bg-[#ccff00]/10 px-2 py-1 font-mono text-[8px] font-bold text-[#ccff00] tracking-widest">
@@ -317,7 +313,6 @@ export default function CreatePoll({ votingHubAddress, provider }) {
                                         <span className="font-mono text-[8px] text-[#f0f0f0]/30 uppercase tracking-widest mt-1">
                                             SCHEMA: {manifest.registrySchema.map(s => s.name).join(', ')}
                                         </span>
-                                        { }
                                         <span className="font-mono text-[8px] text-[#ccff00]/50 uppercase tracking-widest mt-4 border border-[#ccff00]/20 px-2 py-1">
                                             * CSV WILL BE VALIDATED DURING DEPLOYMENT
                                         </span>
@@ -343,7 +338,7 @@ export default function CreatePoll({ votingHubAddress, provider }) {
                                                         {manifest.registrySchema.map(field => {
                                                             const value = row[field.name] || '';
                                                             const errorMsg = validateDatasetField(field, value);
-                                                            const hasError = errorMsg !== null && value !== ''; // Не показываем красным, пока пусто, но не пустим деплой
+                                                            const hasError = errorMsg !== null && value !== '';
 
                                                             return (
                                                                 <td key={field.name} className="p-0 border-l border-[#f0f0f0]/10 relative group/cell">
@@ -359,7 +354,6 @@ export default function CreatePoll({ votingHubAddress, provider }) {
                                                                         `}
                                                                         placeholder={`[ ${field.name} ]`}
                                                                     />
-                                                                    { }
                                                                     {hasError && (
                                                                         <div className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 cursor-help font-bold" title={errorMsg}>
                                                                             !
@@ -398,7 +392,6 @@ export default function CreatePoll({ votingHubAddress, provider }) {
                     </div>
                 )}
 
-                { }
                 <div className="glass-panel relative z-20 p-5 md:p-6 !overflow-visible">
                     <h3 className="mb-6 font-display text-xl font-black uppercase tracking-widest text-[#f0f0f0] flex items-center gap-2">
                         <span className="text-[#ccff00] opacity-50">&gt;</span> NETWORK_LIFESPAN
@@ -436,7 +429,6 @@ export default function CreatePoll({ votingHubAddress, provider }) {
                     </div>
                 </div>
 
-                { }
                 <button
                     type="submit"
                     disabled={isCreating || !canSubmit}
@@ -454,7 +446,6 @@ export default function CreatePoll({ votingHubAddress, provider }) {
                     )}
                 </button>
 
-                { }
                 {!manifest && !isManifestLoading && formData.manifestURI && (
                     <div className="text-center font-mono text-[8px] uppercase tracking-widest text-red-500/70 animate-pulse">
                         &gt; AWAITING_VALID_VERIFIER_CONFIGURATION

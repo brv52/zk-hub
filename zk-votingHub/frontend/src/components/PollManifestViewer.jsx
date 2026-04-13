@@ -29,7 +29,6 @@ const ZKPassportConfigViewer = ({ config }) => {
           key={key}
           className="group relative overflow-hidden border border-[#f0f0f0]/10 bg-black/40 p-4 transition-colors duration-300 hover:border-[#ccff00]/40 hover:bg-[#ccff00]/5"
         >
-          { }
           <div className="absolute right-0 top-0 h-2 w-2 border-r border-t border-[#ccff00]/50 opacity-0 transition-opacity group-hover:opacity-100" />
 
           <span className="mb-2 block font-mono text-[9px] uppercase tracking-[0.3em] text-[#f0f0f0]/40 group-hover:text-[#f0f0f0]/70 transition-colors">
@@ -83,10 +82,8 @@ export default function PollManifestViewer({ manifest }) {
   return (
     <div className="glass-panel relative mb-8 overflow-hidden border border-[#f0f0f0]/10 bg-[#0a0a0a]/80 p-6 md:p-8 shadow-[0_0_40px_rgba(0,0,0,0.5)] backdrop-blur-xl">
 
-      { }
       <div className="absolute left-[-50px] top-[-50px] h-[150px] w-[150px] rounded-full bg-[#ccff00]/5 blur-[80px] pointer-events-none" />
 
-      { }
       <div className="mb-8 flex flex-col items-start justify-between gap-3 border-b border-[#f0f0f0]/10 pb-5 md:flex-row md:items-end relative z-10">
         <div>
           <h3 className="mb-3 break-words font-display text-xl font-black uppercase leading-[1.1] tracking-widest text-[#f0f0f0] drop-shadow-[0_0_10px_rgba(255,255,255,0.1)] md:text-2xl">
@@ -102,7 +99,6 @@ export default function PollManifestViewer({ manifest }) {
           </div>
         </div>
 
-        { }
         <div className="flex items-center self-start space-x-2 border px-2 py-1 font-mono text-[9px] uppercase tracking-widest bg-black/40 backdrop-blur-sm border-[#ccff00]/30 text-[#ccff00]">
           <span className="relative flex h-1.5 w-1.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#ccff00] opacity-50"></span>
@@ -112,7 +108,6 @@ export default function PollManifestViewer({ manifest }) {
         </div>
       </div>
 
-      { }
       <div className="relative z-0">
         <h4 className="mb-5 flex items-center gap-3 font-mono text-xs font-bold uppercase tracking-widest text-[#f0f0f0]">
           <span className="text-[#ccff00] opacity-50">//</span>

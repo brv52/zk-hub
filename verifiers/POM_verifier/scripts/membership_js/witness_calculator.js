@@ -291,7 +291,7 @@ function qualify_input(prefix,input,input1) {
 }
 
 function toArray32(rem,size) {
-    const res = []; //new Uint32Array(size); //has no unshift
+    const res = [];
     const radix = BigInt(0x100000000);
     while (rem) {
         res.unshift( Number(rem % radix));
@@ -307,7 +307,7 @@ function toArray32(rem,size) {
     return res;
 }
 
-function fromArray32(arr) { //returns a BigInt
+function fromArray32(arr) {
     var res = BigInt(0);
     const radix = BigInt(0x100000000);
     for (let i = 0; i<arr.length; i++) {

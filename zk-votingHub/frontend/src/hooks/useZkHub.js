@@ -163,7 +163,7 @@ export function useZkHub(HUB_ADDRESS) {
       setPolls(prevPolls => {
         const missingIds = votedIds.filter(id => !prevPolls.some(p => p.id === id));
 
-        if (missingIds.length === 0) return prevPolls; // Всё уже загружено
+        if (missingIds.length === 0) return prevPolls;
 
         setIsLoadingPolls(true);
 

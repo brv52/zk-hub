@@ -54,7 +54,6 @@ export default function App() {
         resetView={() => setCurrentView('dashboard')}
       />
 
-      { }
       {account && currentView === 'dashboard' && (
         <div className="fixed bottom-6 right-6 z-50">
           <button
@@ -66,7 +65,6 @@ export default function App() {
         </div>
       )}
 
-      { }
       <main className="relative z-10 mx-auto h-screen w-full max-w-7xl flex-1 overflow-y-auto px-6 pb-24 pt-32 custom-scrollbar">
         {!account ? (
           <LandingScreen connectWallet={connectWallet} />

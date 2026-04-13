@@ -31,7 +31,7 @@ export default function VotePage({ pollId, votingHubAddress, provider, account }
   } = useVoteEngine(pollId, votingHubAddress, provider);
 
   const [isExpanded, setIsExpanded] = useState(false);
-  const TEXT_LIMIT = 60; // Немного увеличил лимит для компактного шрифта
+  const TEXT_LIMIT = 60;
   const needsTruncation = pollSubject && pollSubject.length > TEXT_LIMIT;
 
   const getTruncatedText = (text) => {
@@ -75,10 +75,8 @@ export default function VotePage({ pollId, votingHubAddress, provider, account }
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 pb-12">
 
-      { }
       <PollManifestViewer manifest={manifestData} />
 
-      { }
       {isSponsored && account?.toLowerCase() === sponsorAddress?.toLowerCase() && !isClosed && (
         <GasRefillStation
           pollId={pollId}
@@ -87,11 +85,9 @@ export default function VotePage({ pollId, votingHubAddress, provider, account }
         />
       )}
 
-      { }
       <div className="glass-panel relative overflow-hidden border border-[#f0f0f0]/10 bg-[#0a0a0a]/80 p-5 md:p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] backdrop-blur-xl z-20">
         <div className="absolute top-[-100px] right-[-100px] h-[300px] w-[300px] rounded-full bg-[#ccff00]/5 blur-[120px] pointer-events-none" />
 
-        { }
         <div className="mb-6 flex flex-col items-start justify-between gap-3 border-b border-[#f0f0f0]/10 pb-4 md:flex-row md:items-end relative z-10">
           <div>
             <h2 className="font-display text-xl md:text-2xl font-black uppercase tracking-widest text-[#f0f0f0] drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]">
@@ -107,7 +103,6 @@ export default function VotePage({ pollId, votingHubAddress, provider, account }
           </div>
         </div>
 
-        { }
         <div className="relative z-10">
           <label className="mb-2 block font-mono text-[9px] uppercase tracking-[0.3em] text-[#f0f0f0]/40 flex items-center space-x-2">
             <span className="text-[#ccff00] opacity-50">&gt;</span>
@@ -142,7 +137,6 @@ export default function VotePage({ pollId, votingHubAddress, provider, account }
         </div>
       </div>
 
-      { }
       <div className="glass-panel relative overflow-visible border border-[#f0f0f0]/10 bg-[#0a0a0a]/80 p-5 md:p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] backdrop-blur-xl z-10">
         {showResults ? (
           <VoteTelemetry

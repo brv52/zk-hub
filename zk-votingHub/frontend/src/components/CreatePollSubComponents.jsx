@@ -125,10 +125,8 @@ const DurationConfig = ({
 
                     {isDropdownOpen && (
                         <>
-                            { }
                             <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)} />
 
-                            { }
                             <div className="absolute left-0 top-full z-50 mt-1 w-full border border-[#ccff00] bg-[#0a0a0a] shadow-[0_10px_30px_rgba(204,255,0,0.1)]">
                                 {timeUnits.map(unit => (
                                     <div

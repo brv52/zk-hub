@@ -33,19 +33,19 @@ function useZKPassportAuth({ pollId, selectedOption, requirements, executeBlockc
                         if (key === 'pollId' || key === 'domain') continue;
 
                         if (key.startsWith('min')) {
-                            const attr = key.replace('min', '').toLowerCase(); // minAge -> age
+                            const attr = key.replace('min', '').toLowerCase();
                             builder = builder.gte(attr, Number(value));
                         }
                         else if (key.startsWith('max')) {
-                            const attr = key.replace('max', '').toLowerCase(); // maxAge -> age
+                            const attr = key.replace('max', '').toLowerCase();
                             builder = builder.lte(attr, Number(value));
                         }
                         else if (key.startsWith('in')) {
-                            const attr = key.replace('in', '').toLowerCase(); // inNationality -> nationality
+                            const attr = key.replace('in', '').toLowerCase();
                             builder = builder.in(attr, Array.isArray(value) ? value : [value]);
                         }
                         else if (key.startsWith('eq')) {
-                            const attr = key.replace('eq', '').toLowerCase(); // eqGender -> gender
+                            const attr = key.replace('eq', '').toLowerCase();
                             builder = builder.eq(attr, value);
                         }
                     }
