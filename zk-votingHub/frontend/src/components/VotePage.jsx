@@ -4,20 +4,6 @@ import { useVoteEngine } from "../hooks/useVoteEngine";
 import { VoteTelemetry, NodeSelector, ProvingEngineRouter } from "./VotePageSubComponents";
 import GasRefillStation from "./GasRefillStation";
 
-import { Buffer } from "buffer";
-if (typeof window !== "undefined") {
-  window.global = window.global || window;
-  window.Buffer = window.Buffer || Buffer;
-  Uint8Array.prototype._isBuffer = true;
-  if (!Uint8Array.prototype.copy) {
-    Uint8Array.prototype.copy = function (target, targetStart = 0, sourceStart = 0, sourceEnd = this.length) {
-      const source = this.subarray(sourceStart, sourceEnd);
-      target.set(source, targetStart);
-      return source.length;
-    };
-  }
-}
-
 export default function VotePage({ pollId, votingHubAddress, provider, account }) {
   const {
     options, selectedOption, setSelectedOption,

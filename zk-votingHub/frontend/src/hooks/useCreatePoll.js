@@ -2,29 +2,11 @@ import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import Papa from 'papaparse';
 import abi from '../artifacts/VotingHub.json';
+import deployedPresets from '../artifacts/verifierPresets.json';
 import { buildDatabaseFromStrategy } from '../utils/inputResolver/inputResolver';
 import { pinDatasetToIPFS, fetchManifest } from '../utils/zkUtils';
 
-const PRESET_VERIFIERS = [
-    {
-        id: 'membership_default',
-        name: 'Standard Membership (Merkle)',
-        address: '0xcd5AfC8233c0023b965E2Ef8618031434997CEE8',
-        manifestURI: 'ipfs://QmaMeEFqeMHLhHhU2Cfsub2gVy9jRdK2kRY1dWjk1QGdXk'
-    },
-    {
-        id: 'storage_default',
-        name: 'Standart Storage (Merkle)',
-        address: '0xE0B53c0465335253c8514521675dC2e5ff18EeCf',
-        manifestURI: 'ipfs://QmZhYN6VA9oTQKNkU8af44YCpg8gktE9Yhx5N3sHNfANkU'
-    },
-    {
-        id: 'passport_default',
-        name: 'ZK Passport Verification',
-        address: '0x7c37000448D8B85332d987Fca5d9f5C10974f574',
-        manifestURI: 'ipfs://QmUGGTpb6WjDHZnXgpAmBHZvmEwUXm5BcdiQoYALzVugsz'
-    }
-];
+const PRESET_VERIFIERS = Array.isArray(deployedPresets) ? deployedPresets : [];
 
 export function useCreatePoll(votingHubAddress, provider) {
     const [verifierMode, setVerifierMode] = useState('preset');
@@ -78,6 +60,8 @@ export function useCreatePoll(votingHubAddress, provider) {
         const preset = PRESET_VERIFIERS.find(p => p.id === presetId);
         if (preset) {
             setFormData(prev => ({ ...prev, verifierAddress: preset.address, manifestURI: preset.manifestURI }));
+        } else {
+            setFormData(prev => ({ ...prev, verifierAddress: '', manifestURI: '' }));
         }
     };
 

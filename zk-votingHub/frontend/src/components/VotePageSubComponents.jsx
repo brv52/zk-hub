@@ -113,8 +113,6 @@ export const ProvingEngineRouter = (props) => {
 
   return (
     <div className="mb-6 space-y-6 border-t border-[#f0f0f0]/20 pt-6">
-      <h4 className="mb-4 border-l-2 border-[#ccff00] pl-3 font-mono text-xs font-bold uppercase tracking-widest text-[#f0f0f0]">
-      </h4>
       {displayInputs.map((input) => (
         <div key={input.id}>
           <label className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-[#f0f0f0]/50">

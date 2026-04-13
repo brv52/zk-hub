@@ -1,29 +1,128 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { ethers } from 'ethers';
 import { ZKPassport } from '@zkpassport/sdk';
 import { QRCodeSVG } from "qrcode.react";
+
+function resolveRuntimeDomain(requirements) {
+    if (requirements?.domain) return requirements.domain;
+
+    const envDomain = import.meta.env.VITE_ZKPASSPORT_DOMAIN;
+    if (envDomain) return envDomain;
+
+    if (typeof window !== "undefined" && window.location?.hostname) {
+        return window.location.hostname;
+    }
+    return "localhost";
+}
+
+function resolveRuntimeDevMode(domain) {
+    const envFlag = import.meta.env.VITE_ZKPASSPORT_DEV_MODE;
+    if (typeof envFlag === "string") {
+        return envFlag.toLowerCase() === "true";
+    }
+
+    return domain === "localhost" || domain === "127.0.0.1";
+}
 
 function useZKPassportAuth({ pollId, selectedOption, requirements, executeBlockchainTx, onVoteSuccess }) {
     const [qrUrl, setQrUrl] = useState("");
     const [status, setStatus] = useState("> INIT_SDK_BRIDGE...");
     const [isError, setIsError] = useState(false);
-    const isInitialized = useRef(false);
+    const executeTxRef = useRef(executeBlockchainTx);
+    const onVoteSuccessRef = useRef(onVoteSuccess);
+
+    const runtimeDomain = useMemo(() => resolveRuntimeDomain(requirements), [requirements]);
+    const runtimeHost = useMemo(
+        () => import.meta.env.VITE_ZKPASSPORT_HOST || runtimeDomain,
+        [runtimeDomain]
+    );
+    const runtimeScope = useMemo(
+        () => import.meta.env.VITE_ZKPASSPORT_SCOPE || "voting-scope",
+        []
+    );
+    const runtimeDevMode = useMemo(
+        () => resolveRuntimeDevMode(runtimeDomain),
+        [runtimeDomain]
+    );
 
     useEffect(() => {
-        if (isInitialized.current) return;
-        isInitialized.current = true;
+        executeTxRef.current = executeBlockchainTx;
+    }, [executeBlockchainTx]);
+
+    useEffect(() => {
+        onVoteSuccessRef.current = onVoteSuccess;
+    }, [onVoteSuccess]);
+
+    const sendVoteToBlockchain = useCallback(async (zk, proof) => {
+        try {
+            setStatus("> PROOF_RECEIVED. PREPARING_TRANSACTION...");
+
+            const rawParams = zk.getSolidityVerifierParameters({
+                proof: proof,
+                devMode: runtimeDevMode,
+                scope: runtimeScope,
+            });
+
+            const proofVerificationDataTuple = "tuple(bytes32 vkeyHash, bytes proof, bytes32[] publicInputs)";
+            const serviceConfigTuple = "tuple(uint256 validityPeriodInSeconds, string domain, string scope, bool devMode)";
+            const paramsTuple = `tuple(bytes32 version, ${proofVerificationDataTuple} proofVerificationData, bytes committedInputs, ${serviceConfigTuple} serviceConfig)`;
+
+            const formattedParams = {
+                version: rawParams.version,
+                proofVerificationData: {
+                    vkeyHash: rawParams.proofVerificationData.vkeyHash,
+                    proof: rawParams.proofVerificationData.proof,
+                    publicInputs: rawParams.proofVerificationData.publicInputs
+                },
+                committedInputs: rawParams.committedInputs,
+                serviceConfig: {
+                    validityPeriodInSeconds: rawParams.serviceConfig.validityPeriodInSeconds,
+                    domain: rawParams.serviceConfig.domain,
+                    scope: rawParams.serviceConfig.scope,
+                    devMode: rawParams.serviceConfig.devMode
+                }
+            };
+
+            const abiCoder = new ethers.AbiCoder();
+            const encodedProofData = abiCoder.encode([paramsTuple], [formattedParams]);
+
+            await executeTxRef.current(encodedProofData);
+
+            setStatus("> SUCCESS: ANONYMOUS_PAYLOAD_RECORDED.");
+
+            if (onVoteSuccessRef.current) {
+                setTimeout(() => {
+                    onVoteSuccessRef.current();
+                }, 1500);
+            }
+        } catch (err) {
+            setIsError(true);
+            setStatus(`> TX_ERR: ${err.reason || err.message}`);
+        }
+    }, [runtimeDevMode, runtimeScope]);
+
+    useEffect(() => {
+        if (selectedOption === null) {
+            setQrUrl("");
+            setStatus("> SELECT_OPTION_BEFORE_AUTH");
+            return;
+        }
+
+        let isCancelled = false;
 
         const initZK = async () => {
             try {
+                setIsError(false);
+                setQrUrl("");
                 setStatus("> CONNECTING_TO_BRIDGE...");
-                const zkPassport = new ZKPassport("localhost");
+                const zkPassport = new ZKPassport(runtimeHost);
 
                 let builder = await zkPassport.request({
                     name: "ZK_VOTING_HUB",
                     purpose: `SYS.VOTE_POLL_${pollId}`,
                     mode: "compressed-evm",
-                    devMode: true,
-                    scope: "voting-scope",
+                    devMode: runtimeDevMode,
+                    scope: runtimeScope,
                 });
 
                 builder.bind("custom_data", `${pollId}_${selectedOption}`);
@@ -52,81 +151,39 @@ function useZKPassportAuth({ pollId, selectedOption, requirements, executeBlockc
                 }
 
                 const request = builder.done();
+                if (isCancelled) return;
                 setQrUrl(request.url);
                 setStatus("> AWAITING_OPTICAL_SCAN...");
 
                 request.onProofGenerated(async (proof) => {
+                    if (isCancelled) return;
                     setStatus("> PROOF_RECEIVED. TRIGGERING_METAMASK...");
                     await sendVoteToBlockchain(zkPassport, proof);
                 });
 
-                request.onResult((result) => {
+                request.onResult(() => {
+                    if (isCancelled) return;
                     setStatus("> VERIFICATION_FINISHED");
                 });
 
                 request.onError((error) => {
+                    if (isCancelled) return;
                     setIsError(true);
                     setStatus(`> SDK_ERR: ${error.message || error}`);
                 });
 
             } catch (err) {
+                if (isCancelled) return;
                 setIsError(true);
                 setStatus(`> INIT_ERR: ${err.message}`);
-                isInitialized.current = false;
             }
         };
 
         initZK();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pollId, requirements]);
-
-    const sendVoteToBlockchain = async (zk, proof) => {
-        try {
-            setStatus("> PROOF_RECEIVED. PREPARING_TRANSACTION...");
-
-            const rawParams = zk.getSolidityVerifierParameters({
-                proof: proof,
-                devMode: true,
-                scope: "voting-scope",
-            });
-
-            const proofVerificationDataTuple = "tuple(bytes32 vkeyHash, bytes proof, bytes32[] publicInputs)";
-            const serviceConfigTuple = "tuple(uint256 validityPeriodInSeconds, string domain, string scope, bool devMode)";
-            const paramsTuple = `tuple(bytes32 version, ${proofVerificationDataTuple} proofVerificationData, bytes committedInputs, ${serviceConfigTuple} serviceConfig)`;
-
-            const formattedParams = {
-                version: rawParams.version,
-                proofVerificationData: {
-                    vkeyHash: rawParams.proofVerificationData.vkeyHash,
-                    proof: rawParams.proofVerificationData.proof,
-                    publicInputs: rawParams.proofVerificationData.publicInputs
-                },
-                committedInputs: rawParams.committedInputs,
-                serviceConfig: {
-                    validityPeriodInSeconds: rawParams.serviceConfig.validityPeriodInSeconds,
-                    domain: rawParams.serviceConfig.domain,
-                    scope: rawParams.serviceConfig.scope,
-                    devMode: rawParams.serviceConfig.devMode
-                }
-            };
-
-            const abiCoder = new ethers.AbiCoder();
-            const encodedProofData = abiCoder.encode([paramsTuple], [formattedParams]);
-
-            await executeBlockchainTx(encodedProofData);
-
-            setStatus("> SUCCESS: ANONYMOUS_PAYLOAD_RECORDED.");
-
-            if (onVoteSuccess) {
-                setTimeout(() => {
-                    onVoteSuccess();
-                }, 1500);
-            }
-        } catch (err) {
-            setIsError(true);
-            setStatus(`> TX_ERR: ${err.reason || err.message}`);
-        }
-    };
+        return () => {
+            isCancelled = true;
+        };
+    }, [pollId, selectedOption, requirements, runtimeHost, runtimeDevMode, runtimeScope, sendVoteToBlockchain]);
 
     return { qrUrl, status, isError };
 }

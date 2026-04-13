@@ -120,6 +120,8 @@ export default function CreatePoll({ votingHubAddress, provider }) {
         isPreHashed, setIsPreHashed
     } = useCreatePoll(votingHubAddress, provider);
 
+    const selectedPresetId = PRESET_VERIFIERS.find((preset) => preset.address === formData.verifierAddress)?.id || "";
+
     const applyPreset = (val, unit) => {
         setDurationValue(val);
         setDurationUnit(unit);
@@ -235,12 +237,18 @@ export default function CreatePoll({ votingHubAddress, provider }) {
 
                         <div>
                             {verifierMode === 'preset' ? (
-                                <TerminalSelect
-                                    value={formData.verifierAddress === PRESET_VERIFIERS[0].address ? PRESET_VERIFIERS[0].id : formData.verifierAddress === PRESET_VERIFIERS[1].address ? PRESET_VERIFIERS[1].id : formData.verifierAddress === PRESET_VERIFIERS[2].address ? PRESET_VERIFIERS[2].id : ""}
-                                    onChange={(val) => handlePresetSelect(val)}
-                                    options={PRESET_VERIFIERS}
-                                    defaultLabel="-- SELECT_VERIFIER_MODULE --"
-                                />
+                                PRESET_VERIFIERS.length > 0 ? (
+                                    <TerminalSelect
+                                        value={selectedPresetId}
+                                        onChange={(val) => handlePresetSelect(val)}
+                                        options={PRESET_VERIFIERS}
+                                        defaultLabel="-- SELECT_VERIFIER_MODULE --"
+                                    />
+                                ) : (
+                                    <div className="border border-yellow-500/30 bg-yellow-500/10 p-3 font-mono text-[9px] uppercase tracking-widest text-yellow-400">
+                                        PRESET_LIBRARY_UNAVAILABLE // RUN_VERIFIER_DEPLOYMENT_TO_GENERATE_PRESETS
+                                    </div>
+                                )
                             ) : (
                                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                                     <input

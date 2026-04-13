@@ -1,6 +1,18 @@
 import { BaseStrategy } from "./BaseStrategy";
 import { ethers } from "ethers";
 
+function resolveRuntimeDomain(config) {
+    if (config?.domain) return config.domain;
+
+    const envDomain = import.meta.env.VITE_ZKPASSPORT_DOMAIN;
+    if (envDomain) return envDomain;
+
+    if (typeof window !== "undefined" && window.location?.hostname) {
+        return window.location.hostname;
+    }
+    return "localhost";
+}
+
 export class ZKPassportStrategy extends BaseStrategy {
 
     async buildDatabase(manifest, rawDataset, isPreHashed = false) {
@@ -9,7 +21,7 @@ export class ZKPassportStrategy extends BaseStrategy {
             if (val !== undefined) return val;
 
             const lowerKey = key.toLowerCase();
-            if (lowerKey.includes('domain')) return window?.location?.hostname || "localhost";
+            if (lowerKey.includes('domain')) return resolveRuntimeDomain(manifest.config);
             if (lowerKey.includes('age')) return 0;
             if (lowerKey.includes('nationalit') || lowerKey.includes('countr')) return [];
 
