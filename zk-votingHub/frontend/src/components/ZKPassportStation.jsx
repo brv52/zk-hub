@@ -97,7 +97,7 @@ function useZKPassportAuth({ pollId, selectedOption, requirements, executeBlockc
             }
         } catch (err) {
             setIsError(true);
-            setStatus(`> TX_ERR: ${err.reason || err.message}`);
+            setStatus(`> TX_ERR: FAILED`);
         }
     }, [runtimeDevMode, runtimeScope]);
 
@@ -175,7 +175,7 @@ function useZKPassportAuth({ pollId, selectedOption, requirements, executeBlockc
             } catch (err) {
                 if (isCancelled) return;
                 setIsError(true);
-                setStatus(`> INIT_ERR: ${err.message}`);
+                setStatus(`> INIT_ERR: FAILED`);
             }
         };
 

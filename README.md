@@ -199,7 +199,7 @@ secret,value
 
 - Modul: Proof of Storage (POS / Gated L2 Verifier)
 - Název hlasování: DAO Governance (EIP-42): Snížení inflační křivky protokolu (Požadovaný minimální zůstatek: 10 000 GOV)
-- Popis: Hlasovat mohou pouze účastníci s hodnotou value >= minThreshold.
+- Popis: K dosažení spravedlivého rozhodování v rámci DAO je klíčové omezit vliv čerstvých a spekulativních účtů. Organizátor využívá snímek stavu L2 sítě (snapshot), aby matematicky zajistil, že právo hlasovat mají pouze dlouhodobí držitelé, jejichž prokazatelný zůstatek dosahuje alespoň 10 000 GOV tokenů.
 - Možnosti:
     - Schvaluji EIP-42 (Snížení inflace o 15%)
     - Zamítám návrh (Zachování současného stavu)
@@ -208,7 +208,7 @@ secret,value
 Dataset (CSV):
 
 ```csv
-secret,value
+slot,value
 0x1111111111111111111111111111111111111111111111111111111111111111,15000
 0x2222222222222222222222222222222222222222222222222222222222222222,25500
 0x3333333333333333333333333333333333333333333333333333333333333333,10000
@@ -240,7 +240,7 @@ secret,value
 
 - Modul: ZKPassport (Stateless Biometric Verifier)
 - Název hlasování: Občanská iniciativa k ochraně digitálního soukromí (Podmínky: Platný e-Pas, Věk 18+, CZE/RUS)
-- Popis: Stateless ověřování na základě podpisu státu a veřejných parametrů. Dataset není potřeba.
+- Popis: V reakci na kontroverzní návrh legislativy byla spuštěna nadnárodní iniciativa. Aby se předešlo podvodům s uměle vytvořenými profily, ověřuje systém oprávněnost voliče čtením biometrických dat a elektronického podpisu státu přímo ze smartphonu. Účastníkovi musí být více než 18 let a musí prokázat občanství ČR nebo Ruské federace, aniž by svá osobní data sdílel se systémem.
 - Možnosti:
     - Souhlasím se striktní regulací zpracování osobních dat (Opt-in)
     - Podporuji kompromisní návrh s výjimkami pro výzkumné účely
@@ -250,7 +250,7 @@ secret,value
 
 - Modul: Proof of Membership (POM)
 - Název hlasování: Mimořádné tajné hlasování Odborového svazu: Vyhlášení generální stávky v podniku (Kryptograficky ověřená členská základna)
-- Popis: Demonstrace silné anonymity při vysoce citlivém rozhodování zaměstnanců.
+- Popis: V napjaté atmosféře probíhajícího kolektivního vyjednávání potřebuje odborový svaz zjistit reálnou ochotu zaměstnanců stávkovat, a to bez obav z možných represí ze strany vedení podniku. Odborová centrála předem vytvořila Merkle strom z interního seznamu aktivních členů. Systém umožňuje každému členu tajně a nezávisle potvrdit svou účast, a přitom kryptograficky prokázat, že je evidovaným odborářem.
 - Možnosti:
     - Pro vyhlášení neomezené stávky
     - Pro vyhlášení výstražné stávky (omezení na 2 hodiny)
@@ -291,7 +291,7 @@ secret,value
 
 - Modul: Proof of Storage (POS)
 - Název hlasování: Alokace investičního fondu GreenDeFi DAO: Financování solárního parku (Vyžadován minimální vklad 10 000 environmentálních tokenů)
-- Popis: Ochrana proti Sybil útokům přes minimální ekonomický stake.
+- Popis: Ekologický investiční fond rozhoduje o obří investici do obnovitelných zdrojů energie. Aby bylo zajištěno, že o nakládání s pokladnou fondu nerozhodují nezainteresované osoby, musí každý hlasující předložit důkaz, že do projektu dříve investoval kapitál. Systém dynamicky ověřuje, zda hodnota prokazatelného vkladu překračuje bezpečnostní bariéru (minThreshold) 10 000 tokenů, a to bez odhalení konkrétního investora.
 - Možnosti:
     - Schválit financování projektu (100% požadované alokace)
     - Schválit částečné financování (50% alokace, zbytek z jiných zdrojů)

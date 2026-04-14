@@ -46,7 +46,7 @@ export function useCreatePoll(votingHubAddress, provider) {
                 setStatus({ type: 'success', message: 'MANIFEST_LOADED_AND_VERIFIED' });
             } catch (err) {
                 setManifest(null);
-                setStatus({ type: 'error', message: err.message });
+                setStatus({ type: 'error', message: FAILED });
             } finally {
                 setIsManifestLoading(false);
             }

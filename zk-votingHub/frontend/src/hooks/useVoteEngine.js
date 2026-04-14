@@ -89,7 +89,7 @@ export function useVoteEngine(pollId, votingHubAddress, provider) {
                     setDisplayInputs(inputsToDisplay);
                 }
             } catch (err) {
-                setPageError(err.message);
+                setPageError("FAILED");
             } finally {
                 setIsLoading(false);
             }
@@ -253,7 +253,7 @@ export function useVoteEngine(pollId, votingHubAddress, provider) {
 
         } catch (err) {
             console.error("TX_ERROR_DETAILS:", err);
-            setTxStatus(`> ERROR: ${err.shortMessage || err.message}`);
+            setTxStatus(`> ERROR: TRANSACTION FAILED`);
             throw err;
         } finally {
             setIsProving(false);
@@ -293,7 +293,7 @@ export function useVoteEngine(pollId, votingHubAddress, provider) {
             await executeBlockchainTx(encodedProofData);
 
         } catch (err) {
-            setTxStatus(`> ${err.reason || err.message}`);
+            setTxStatus(`> FAILED`);
             setIsProving(false);
         }
     };
