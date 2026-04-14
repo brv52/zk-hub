@@ -1,23 +1,23 @@
-[ 
-	{
-		"id": "membership_default",
-		"name": "Standard Membership (Merkle)",
-		"address": "0xcd5AfC8233c0023b965E2Ef8618031434997CEE8",
-		"manifestURI": "ipfs://QmaMeEFqeMHLhHhU2Cfsub2gVy9jRdK2kRY1dWjk1QGdXk",
-		"updatedAt": "2026-04-01T02:00:26.326Z"
-	},
-	{
-		"id": "storage_default",
-		"name": "Standard Storage (Merkle)",
-		"address": "0xE0B53c0465335253c8514521675dC2e5ff18EeCf",
-		"manifestURI": "ipfs://QmZhYN6VA9oTQKNkU8af44YCpg8gktE9Yhx5N3sHNfANkU",
-		"updatedAt": "2026-04-01T02:00:15.043Z"
-	},
-	{
-		"id": "passport_default",
-		"name": "ZK Passport Verification",
-		"address": "0x7c37000448D8B85332d987Fca5d9f5C10974f574",
-		"manifestURI": "ipfs://QmUGGTpb6WjDHZnXgpAmBHZvmEwUXm5BcdiQoYALzVugsz",
-		"updatedAt": "2026-04-01T02:18:08.695Z"
-	}
+[
+    {
+        "id": "membership_default",
+        "name": "Standard Membership (Merkle)",
+        "address": "0xcd5AfC8233c0023b965E2Ef8618031434997CEE8",
+        "manifestURI": "ipfs://QmZ6PfRWkR4iA9qxvkyGew4YUubwYMCZPNaZb3B5tQiz2D",
+        "updatedAt": "2026-04-14T01:11:57.555Z"
+    },
+    {
+        "id": "storage_default",
+        "name": "Standard Storage (Merkle)",
+        "address": "0xE0B53c0465335253c8514521675dC2e5ff18EeCf",
+        "manifestURI": "ipfs://QmXxrNkihDTz8HfDyJ4ayagM6CEztdhEDH2XHBUue7vjKm",
+        "updatedAt": "2026-04-14T01:27:02.618Z"
+    },
+    {
+        "id": "passport_default",
+        "name": "ZK Passport Verification",
+        "address": "0x7c37000448D8B85332d987Fca5d9f5C10974f574",
+        "manifestURI": "ipfs://QmUGGTpb6WjDHZnXgpAmBHZvmEwUXm5BcdiQoYALzVugsz",
+        "updatedAt": "2026-04-01T02:18:08.695Z"
+    }
 ]

@@ -29,7 +29,7 @@ async function main() {
             arity: 2,
             hashAlgorithm: "poseidon",
             emptyNodeValue: "0",
-            minThreshold: 0
+            minThreshold: 1
         },
         registrySchema: [
             { name: "secret", type: "string", label: "Voter Secret (Entropy)" },

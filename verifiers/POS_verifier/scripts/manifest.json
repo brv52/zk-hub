@@ -8,7 +8,7 @@
   },
   "config": {
     "depth": 10,
-    "minThreshold": 100
+    "minThreshold": 10000
   },
   "registrySchema": [
     {

@@ -26,7 +26,7 @@ async function main() {
         artifacts: { wasmURI, zkeyURI },
         config: {
             depth: 10,
-            minThreshold: 100
+            minThreshold: 10000
         },
         registrySchema: [
             { name: "slot", type: "string", label: "Storage Slot (User ID/Address)" },

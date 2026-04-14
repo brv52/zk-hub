@@ -11,7 +11,7 @@
     "arity": 2,
     "hashAlgorithm": "poseidon",
     "emptyNodeValue": "0",
-    "minThreshold": 0
+    "minThreshold": 1
   },
   "registrySchema": [
     {
