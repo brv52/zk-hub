@@ -33,8 +33,8 @@ function useZKPassportAuth({ pollId, selectedOption, requirements, executeBlockc
 
     const runtimeDomain = useMemo(() => resolveRuntimeDomain(requirements), [requirements]);
     const runtimeHost = useMemo(
-        () => import.meta.env.VITE_ZKPASSPORT_HOST || runtimeDomain,
-        [runtimeDomain]
+        () => import.meta.env.VITE_ZKPASSPORT_HOST || undefined,
+        []
     );
     const runtimeScope = useMemo(
         () => import.meta.env.VITE_ZKPASSPORT_SCOPE || "voting-scope",

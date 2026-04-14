@@ -11,7 +11,7 @@ const manifest = {
     verificationMethod: "zkpassport",
     artifacts: {},
     config: {
-        domain: "localhost",
+        domain: "zk-hub-seven.vercel.app",
         minAge: 18,
         inNationality: ["CZE", "RUS"]
     },
