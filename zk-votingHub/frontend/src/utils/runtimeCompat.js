@@ -12,7 +12,6 @@ export function applyRuntimeCompat() {
     window.global = window.global || window;
     window.Buffer = window.Buffer || Buffer;
 
-    // The prover stack expects Node-like Buffer flags/methods on typed arrays.
     if (!Uint8Array.prototype._isBuffer) {
         Object.defineProperty(Uint8Array.prototype, "_isBuffer", {
             value: true,
