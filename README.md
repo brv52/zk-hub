@@ -5,7 +5,7 @@ Tento dokument slouží jako komplexní průvodce pro zprovoznění, testování
 ## Živá ukázka (Live Demo)
 
 Plně funkční a nasazená verze aplikace je veřejně dostupná k okamžitému otestování na následujícím odkazu:
-**  **
+**https://zk-hub-seven.vercel.app/**
 
 ## 1. Prerekvizity
 
