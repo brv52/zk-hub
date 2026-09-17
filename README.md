@@ -223,13 +223,3 @@ Implement the `IUniversalVerifier` interface, deploy the verifier contract, publ
 The core test suite covers deployment roles, organizer authorization, poll creation, sponsorship deposits and deductions, insolvency behavior, valid voting, double-vote rejection, and administrative withdrawals. Verifier packages also include circuit and wrapper-specific tests where applicable.
 
 This repository should be treated as a research and portfolio implementation, not as an audited production election system. Before mainnet use, review the verifier circuits and generated keys, formalize trusted-forwarder/account-abstraction assumptions, harden IPFS and secret handling, add CI and dependency auditing, and obtain an independent smart-contract/security audit.
-
-## Portfolio Readiness
-
-**Yes, it is a strong portfolio project for a blockchain, zero-knowledge, or full-stack Web3 role.** It demonstrates meaningful systems work: Solidity access control and reentrancy protection, pluggable verifier architecture, Groth16/Circom integration, nullifier-based privacy, IPFS content addressing, React integration, and account abstraction.
-
-For recruiters, the project will present best when the README is paired with reproducible test commands, a short architecture diagram, verified testnet addresses, and a concise demo video. It is not yet “production-ready” in the operational or security-audit sense: the repository has no CI workflow, no Docker/Make/CMake automation, sparse package scripts, and depends on external RPC, Pinata, ZKPassport, and Alchemy services. Those are clear next improvements rather than reasons to hide the project.
-
-## License
-
-The individual package metadata currently uses the ISC license declaration. Confirm and standardize the intended repository-wide license before public distribution.
